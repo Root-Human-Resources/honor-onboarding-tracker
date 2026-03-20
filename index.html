@@ -1,0 +1,1467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Honor — Onboarding Tracker</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap');
+:root{
+  --bg:#eef0f4; --surface:#fff; --border:#c5cad4; --text:#1a2230; --muted:#44546A;
+  --accent:#5B9BD5; --accent-light:#e8f2fb; --done:#2d6a4f; --done-light:#e6f2ec;
+  --dark:#333F50; --dark-text:#f0f2f5; --warn:#92400e; --warn-bg:#fef3c7;
+  --orange:#ED7D31; --gold:#FFC000;
+  --mono:'IBM Plex Mono',monospace; --sans:'IBM Plex Sans',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:100vh;}
+
+/* ── HEADER ── */
+.g-header{background:var(--dark);color:var(--dark-text);padding:0 28px;display:flex;align-items:stretch;justify-content:space-between;border-bottom:3px solid var(--accent);position:sticky;top:0;z-index:200;flex-wrap:wrap;min-height:54px;}
+.g-left{display:flex;align-items:center;gap:14px;padding:10px 0;}
+.back-btn{background:#283447;border:1px solid #4a5a6e;color:#b8c4d0;font-family:var(--sans);font-size:12px;padding:6px 12px;border-radius:4px;cursor:pointer;transition:background .15s;}
+.back-btn:hover{background:#3a4d62;}
+.g-title{font-size:15px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#ffffff;}
+.g-sub{font-family:var(--mono);font-size:10px;color:#8a9bb0;margin-top:2px;}
+.user-pill{display:flex;align-items:center;gap:8px;background:#283447;border-radius:4px;padding:6px 12px;margin:10px 0;}
+.user-pill label{font-family:var(--mono);font-size:10px;color:#a0b4c8;text-transform:uppercase;white-space:nowrap;font-weight:700;}
+.user-pill input{background:transparent;border:none;outline:none;font-family:var(--sans);font-size:13px;color:#ffffff;width:150px;font-weight:500;}
+.user-pill input::placeholder{color:#8aafc8;}
+
+/* ── VIEWS ── */
+.view{display:none;}.view.active{display:block;}
+
+/* ── BUTTONS ── */
+.btn{font-family:var(--sans);font-size:13px;font-weight:500;padding:8px 18px;border-radius:4px;border:none;cursor:pointer;transition:all .15s;white-space:nowrap;display:inline-flex;align-items:center;gap:6px;}
+.btn-primary{background:var(--accent);color:white;}.btn-primary:hover{background:#4a87c0;}
+.btn-secondary{background:var(--surface);color:var(--text);border:1.5px solid var(--border);}.btn-secondary:hover{background:var(--bg);}
+.btn-danger{background:#fee2e2;color:#991b1b;border:1.5px solid #fca5a5;}.btn-danger:hover{background:#fca5a5;}
+.btn-finalize{background:var(--done);color:white;}.btn-finalize:hover{background:#235a40;}
+.btn-notify{background:var(--orange);color:white;}.btn-notify:hover{background:#d46a24;}
+.btn-sm{padding:5px 12px;font-size:12px;}
+.spacer{flex:1;}
+
+/* ── ROSTER ── */
+.toolbar{background:var(--surface);border-bottom:1px solid var(--border);padding:13px 28px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.tab-group{display:flex;gap:2px;}
+.tab{font-family:var(--sans);font-size:12px;font-weight:500;padding:6px 14px;border:1.5px solid var(--border);border-radius:4px;cursor:pointer;background:var(--bg);color:var(--muted);transition:all .15s;}
+.tab.active{background:var(--dark);color:white;border-color:var(--dark);}
+.search-box{border:1.5px solid var(--border);border-radius:4px;padding:6px 11px;font-family:var(--sans);font-size:13px;background:var(--surface);outline:none;width:210px;transition:border-color .2s;}
+.search-box:focus{border-color:var(--accent);}
+.roster-wrap{padding:24px 28px;}
+.roster-table{width:100%;border-collapse:collapse;background:var(--surface);border-radius:6px;overflow:hidden;border:1px solid var(--border);}
+.roster-table th{background:var(--dark);color:#ffffff;font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.08em;padding:11px 14px;text-align:left;font-weight:700;}
+.roster-table td{padding:12px 14px;border-bottom:1px solid var(--bg);vertical-align:middle;font-size:13px;}
+.roster-table tr:last-child td{border-bottom:none;}
+.roster-table tbody tr{cursor:pointer;transition:background .1s;}
+.roster-table tbody tr:hover td{background:var(--accent-light);}
+.roster-table tbody tr.fin-row td{background:var(--done-light);}
+.roster-table tbody tr.fin-row:hover td{background:#d4ece0;}
+.emp-name{font-weight:600;}
+.emp-sub{font-size:11px;color:var(--muted);font-family:var(--mono);margin-top:2px;}
+.badge{display:inline-flex;align-items:center;gap:4px;font-family:var(--mono);font-size:10px;font-weight:600;padding:3px 8px;border-radius:20px;text-transform:uppercase;letter-spacing:.05em;}
+.badge-active{background:#dbeafe;color:#1e4f8c;}
+.badge-done{background:var(--done-light);color:var(--done);}
+.badge-notified{background:#fff0e6;color:#c45f10;margin-left:4px;}
+.mini-bar{display:flex;align-items:center;gap:8px;}
+.mini-bar-bg{width:80px;height:5px;background:#dce1e8;border-radius:3px;overflow:hidden;}
+.mini-bar-fill{height:100%;background:var(--accent);border-radius:3px;transition:width .3s;}
+.mini-bar-fill.full{background:var(--done);}
+.mini-pct{font-family:var(--mono);font-size:10px;color:var(--muted);}
+.row-actions{display:flex;gap:5px;}
+.empty-state{text-align:center;padding:56px 20px;color:var(--muted);}
+.empty-state .icon{font-size:34px;margin-bottom:10px;}
+.empty-state p{font-size:14px;margin-bottom:14px;}
+
+/* ── INTAKE FORM VIEW ── */
+.form-view-wrap{max-width:820px;margin:0 auto;padding:32px 28px 110px;}
+.form-view-title{font-size:20px;font-weight:600;margin-bottom:4px;}
+.form-view-sub{font-family:var(--mono);font-size:11px;color:var(--muted);margin-bottom:28px;}
+
+/* Cards */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:18px;}
+.card-hdr{background:var(--dark);color:#ffffff;padding:12px 20px;display:flex;align-items:center;justify-content:space-between;}
+.card-hdr h3{font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#ffffff;}
+.card-hdr .pii-pill{background:rgba(237,125,49,.25);color:#f5a96a;font-family:var(--mono);font-size:9px;padding:2px 8px;border-radius:20px;text-transform:uppercase;letter-spacing:.06em;}
+.card-hdr .cond-pill{background:rgba(91,155,213,.2);color:#9ec6e8;font-family:var(--mono);font-size:9px;padding:2px 8px;border-radius:20px;letter-spacing:.04em;}
+.card-body{padding:20px 22px;display:flex;flex-direction:column;gap:18px;}
+
+/* Field grid */
+.fgrid{display:grid;gap:16px;}
+.fgrid.g2{grid-template-columns:1fr 1fr;}
+.fgrid.g3{grid-template-columns:1fr 1fr 1fr;}
+.fgrid.g4{grid-template-columns:1fr 1fr 1fr 1fr;}
+@media(max-width:700px){.fgrid.g2,.fgrid.g3,.fgrid.g4{grid-template-columns:1fr;}}
+
+.ff{display:flex;flex-direction:column;gap:5px;}
+.ff label{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:600;display:flex;align-items:center;gap:6px;}
+.ff label .auto-tag{background:#dbeafe;color:#1e4f8c;font-size:8px;padding:1px 6px;border-radius:3px;text-transform:uppercase;letter-spacing:.05em;}
+.ff input,.ff select,.ff textarea{font-family:var(--sans);font-size:14px;border:1.5px solid var(--border);border-radius:5px;padding:9px 12px;background:white;color:var(--text);outline:none;transition:border-color .2s;width:100%;font-weight:500;}
+.ff input:focus,.ff select:focus,.ff textarea:focus{border-color:var(--accent);background:white;}
+.ff input:read-only{background:#e4e8ef;color:var(--muted);cursor:default;font-weight:400;}
+.ff textarea{resize:vertical;min-height:90px;line-height:1.5;}
+.ff select{cursor:pointer;}
+
+/* Multi-select equipment */
+.multi-select-wrap{border:1.5px solid var(--border);border-radius:5px;background:var(--bg);overflow:hidden;}
+.multi-select-wrap:focus-within{border-color:var(--accent);}
+.multi-select-list{display:flex;flex-direction:column;max-height:220px;overflow-y:auto;}
+.ms-item{display:flex;align-items:center;gap:10px;padding:8px 12px;cursor:pointer;transition:background .1s;border-bottom:1px solid var(--border);user-select:none;}
+.ms-item:last-child{border-bottom:none;}
+.ms-item:hover{background:var(--accent-light);}
+.ms-item.selected{background:var(--done-light);}
+.ms-item.selected:hover{background:#d2eadb;}
+.ms-cb{width:16px;height:16px;border:2px solid var(--border);border-radius:3px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:white;transition:all .12s;}
+.ms-item.selected .ms-cb{background:var(--done);border-color:var(--done);}
+.ms-ck{display:none;color:white;font-size:10px;font-weight:700;}
+.ms-item.selected .ms-ck{display:block;}
+.ms-label{font-size:13px;}
+
+/* Asset checkboxes */
+.asset-grid{display:flex;flex-wrap:wrap;gap:8px;}
+.asset-cb{display:flex;align-items:center;gap:7px;font-size:13px;cursor:pointer;background:var(--bg);border:1.5px solid var(--border);padding:8px 14px;border-radius:5px;transition:all .12s;user-select:none;}
+.asset-cb:hover{border-color:var(--accent);background:var(--accent-light);}
+.asset-cb input{width:15px;height:15px;cursor:pointer;accent-color:var(--accent);}
+.asset-cb.checked{border-color:var(--accent);background:var(--accent-light);font-weight:500;}
+
+/* Conditional section */
+.cond-section{transition:all .2s;}
+.cond-section.hidden-section{display:none;}
+
+/* PPE section */
+.ppe-grid{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:14px;}
+@media(max-width:700px){.ppe-grid{grid-template-columns:1fr 1fr;}}
+.ppe-cat label{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:600;display:block;margin-bottom:5px;}
+
+/* Footer */
+.form-footer{position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:2px solid var(--border);padding:12px 28px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;z-index:150;}
+.save-status{font-family:var(--mono);font-size:11px;color:var(--muted);}
+.save-status.saved{color:var(--done);}.save-status.saving{color:var(--accent);}
+
+/* ── CHECKLIST VIEW ── */
+.cl-view-wrap{max-width:880px;margin:0 auto;padding:24px 28px 100px;}
+.cl-fin-banner{background:var(--done);color:white;padding:12px 28px;font-family:var(--mono);font-size:11px;letter-spacing:.05em;margin-bottom:20px;border-radius:6px;}
+.cl-prog-bar{background:var(--dark);border-radius:6px;padding:12px 18px;display:flex;align-items:center;gap:14px;margin-bottom:20px;}
+.cl-prog-bar .pb-bg{flex:1;height:6px;background:#1e2d3e;border-radius:3px;overflow:hidden;}
+.cl-prog-bar .pb-fill{height:100%;background:var(--accent);border-radius:3px;transition:width .4s;}
+.cl-prog-bar .pb-fill.full{background:#6fcf97;}
+.cl-prog-bar .pb-lbl{font-family:var(--mono);font-size:11px;color:#ffffff;white-space:nowrap;font-weight:600;}
+.cl-section{background:var(--surface);border:1px solid var(--border);border-radius:6px;overflow:hidden;margin-bottom:14px;}
+.cl-sec-hdr{background:var(--dark);color:#ffffff;padding:11px 18px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none;}
+.cl-sec-hdr h3{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#ffffff;}
+.cl-sec-meta{display:flex;align-items:center;gap:10px;}
+.cl-sec-count{font-family:var(--mono);font-size:11px;color:#ffffff;font-weight:600;}
+.cl-sec-count.done{color:#6fcf97;}
+.chevron{font-size:10px;color:#ffffff;transition:transform .2s;}
+.cl-section.collapsed .chevron{transform:rotate(-90deg);}
+.cl-section.collapsed .cl-sec-body{display:none;}
+.cl-item{display:flex;align-items:flex-start;gap:12px;padding:10px 18px;border-bottom:1px solid var(--bg);cursor:pointer;transition:background .12s;}
+.cl-item:last-child{border-bottom:none;}
+.cl-item:hover{background:var(--accent-light);}
+.cl-item.checked{background:var(--done-light);}
+.cl-item.checked:hover{background:#d2eadb;}
+.cl-item.sub{padding-left:42px;}
+.cl-item.readonly{cursor:default;}
+.cl-item.readonly:hover{background:var(--done-light);}
+.cl-cb{width:17px;height:17px;border:2px solid var(--border);border-radius:3px;flex-shrink:0;margin-top:2px;display:flex;align-items:center;justify-content:center;background:white;transition:all .14s;}
+.cl-item.checked .cl-cb{background:var(--done);border-color:var(--done);}
+.cl-ck{display:none;color:white;font-size:10px;font-weight:700;}
+.cl-item.checked .cl-ck{display:block;}
+.cl-item-lbl{font-size:13px;color:var(--text);line-height:1.4;flex:1;}
+.cl-item.checked .cl-item-lbl{color:var(--done);text-decoration:line-through;text-decoration-color:#9ecfb4;}
+.cl-item-who{font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:2px;}
+.audit-panel{background:var(--surface);border:1px solid var(--border);border-radius:6px;overflow:hidden;margin-top:14px;}
+.audit-hdr{background:var(--dark);color:#ffffff;padding:10px 18px;font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.08em;font-weight:700;}
+.audit-log{max-height:200px;overflow-y:auto;padding:12px 18px;display:flex;flex-direction:column;gap:5px;}
+.audit-entry{font-family:var(--mono);font-size:10px;color:var(--muted);border-left:2px solid var(--border);padding-left:10px;line-height:1.5;}
+.audit-entry.empty{border-left:none;padding-left:0;font-style:italic;color:#9aabb8;}
+.aw{color:var(--accent);font-weight:600;}.ac{color:var(--done);}.au{color:var(--orange);}
+.cl-action-bar{position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:2px solid var(--border);padding:12px 28px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;z-index:150;}
+
+/* ── MODALS ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(20,30,45,.6);display:flex;align-items:center;justify-content:center;z-index:500;padding:20px;}
+.modal-overlay.hidden{display:none;}
+.modal{background:var(--surface);border-radius:8px;width:100%;max-width:540px;border:1px solid var(--border);overflow:hidden;max-height:90vh;display:flex;flex-direction:column;}
+.modal-hdr{background:var(--dark);color:#ffffff;padding:15px 22px;font-size:13px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;flex-shrink:0;}
+.modal-hdr.red{background:#991b1b;}.modal-hdr.green{background:var(--done);}.modal-hdr.blue{background:var(--accent);}
+.modal-body{padding:22px;display:flex;flex-direction:column;gap:14px;overflow-y:auto;}
+.modal-ftr{padding:14px 22px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;flex-shrink:0;}
+.finalize-box{background:var(--done-light);border:2px solid #6fcf97;border-radius:6px;padding:18px 20px;}
+.finalize-box p{font-size:13px;color:var(--done);line-height:1.65;}
+.notif-group{border:1px solid var(--border);border-radius:6px;overflow:hidden;margin-bottom:6px;}
+.notif-group-hdr{background:#eef0f4;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;font-size:13px;font-weight:600;}
+.notif-to{font-family:var(--mono);font-size:10px;color:var(--muted);font-weight:400;margin-left:8px;}
+.notif-group-body{padding:10px 14px;background:white;}
+.notif-skip .notif-group-hdr{background:#f5f7fa;opacity:.65;}
+.notif-skip-reason{font-size:11px;color:#9aabb8;font-style:italic;padding:6px 14px 10px;background:white;}
+.nstat{font-family:var(--mono);font-size:10px;padding:2px 8px;border-radius:3px;}
+.nstat.pending{background:var(--warn-bg);color:var(--warn);}.nstat.sent{background:var(--done-light);color:var(--done);}.nstat.error{background:#fee2e2;color:#991b1b;}.nstat.skipped{background:#eef0f4;color:#8a9bb0;}
+
+/* ── TOAST ── */
+.toast{position:fixed;bottom:72px;right:22px;background:var(--dark);color:white;font-family:var(--mono);font-size:12px;padding:10px 17px;border-radius:4px;opacity:0;transform:translateY(8px);transition:all .3s;pointer-events:none;z-index:400;}
+.toast.show{opacity:1;transform:translateY(0);}
+
+@media(max-width:640px){.roster-wrap,.form-view-wrap,.cl-view-wrap{padding:14px 14px 100px;}.g-header{padding:0 14px;}}
+</style>
+</head>
+<body>
+
+<!-- ═══ HEADER ═══ -->
+<div class="g-header">
+  <div class="g-left">
+    <div id="backWrap" style="display:none">
+      <button class="back-btn" id="backBtn" onclick="handleBack()">← Back</button>
+    </div>
+    <div>
+      <div class="g-title" id="gTitle">Onboarding Tracker</div>
+      <div class="g-sub" id="gSub">Honor Model · Craft &amp; Field Supervisor</div>
+    </div>
+  </div>
+  <div class="user-pill">
+    <label>You:</label>
+    <input type="text" id="currentUser" placeholder="Enter your name…" oninput="saveUserName()">
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<!-- VIEW: ROSTER                           -->
+<!-- ═══════════════════════════════════════ -->
+<div id="viewRoster" class="view">
+  <div class="toolbar">
+    <div class="tab-group">
+      <button class="tab active" id="tabActive" onclick="setTab('active')">Active</button>
+      <button class="tab" id="tabFinalized" onclick="setTab('finalized')">Finalized</button>
+      <button class="tab" id="tabAll" onclick="setTab('all')">All</button>
+    </div>
+    <input type="text" class="search-box" id="rSearch" placeholder="Search name or company…" oninput="renderRoster()">
+    <div class="spacer"></div>
+    <button class="btn btn-primary" onclick="openIntakeForm(null)">+ New Employee</button>
+  </div>
+  <div class="roster-wrap">
+    <table class="roster-table">
+      <thead><tr>
+        <th>Employee</th><th>Company</th><th>Position</th>
+        <th>Start Date</th><th>Progress</th><th>Status</th>
+        <th style="width:140px"></th>
+      </tr></thead>
+      <tbody id="rosterBody"></tbody>
+    </table>
+    <div class="empty-state hidden" id="emptyState">
+      <div class="icon">📋</div>
+      <p>No employees yet. Add your first new hire to get started.</p>
+      <button class="btn btn-primary" onclick="openIntakeForm(null)">+ Add Employee</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<!-- VIEW: INTAKE FORM                      -->
+<!-- ═══════════════════════════════════════ -->
+<div id="viewForm" class="view">
+  <div class="form-view-wrap">
+    <div class="form-view-title" id="formTitle">New Employee</div>
+    <div class="form-view-sub" id="formSub">Complete all required fields and save to create the onboarding record.</div>
+
+    <!-- CARD: Core Info -->
+    <div class="card">
+      <div class="card-hdr"><h3>Employee Information</h3></div>
+      <div class="card-body">
+        <div class="fgrid g3">
+          <div class="ff">
+            <label>Onboarding Start Date <span class="auto-tag">Auto</span></label>
+            <input type="date" id="fOnboardStart" readonly>
+          </div>
+          <div class="ff">
+            <label>Hiring Company *</label>
+            <select id="fCompany" onchange="schedSave()">
+              <option value="">— Select Company —</option>
+              <option>Aero Paving and Construction</option>
+              <option>Brown Engineers and Consultants</option>
+              <option>Brown Industrial Construction</option>
+              <option>Denley Brown Contractors</option>
+              <option>Elevate Construction</option>
+              <option>General Sand &amp; Gravel</option>
+              <option>Guardian Safety and Quality Solutions</option>
+              <option>Honor Fleet Maintenance</option>
+              <option>Honor Indemnity Holdings</option>
+              <option>Honor Services</option>
+              <option>Impact Infrastructure</option>
+              <option>Leadpoint Consulting Services</option>
+              <option>Louisiana Recycled Aggregates</option>
+              <option>Precision Grading and Sitework</option>
+              <option>Root HR</option>
+              <option>Stone Construction</option>
+              <option>Wheeler Brown Land Company</option>
+              <option>Young Project Services</option>
+            </select>
+          </div>
+          <div class="ff">
+            <label>Employee Name *</label>
+            <input type="text" id="fName" placeholder="Full legal name" oninput="schedSave()">
+          </div>
+        </div>
+        <div class="fgrid g2">
+          <div class="ff">
+            <label>Position Type *</label>
+            <select id="fPosType" onchange="handlePosTypeChange(); schedSave();">
+              <option value="">— Select —</option>
+              <option value="Craft">Craft</option>
+              <option value="Field Supervision">Field Supervision</option>
+              <option value="Professional">Professional</option>
+            </select>
+          </div>
+          <div class="ff">
+            <label>Job Title</label>
+            <input type="text" id="fPosition" placeholder="e.g. Heavy Equipment Operator" oninput="schedSave()">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CARD: Compensation -->
+    <div class="card">
+      <div class="card-hdr">
+        <h3>Compensation</h3>
+        <span class="pii-pill">🔒 PII — Not Included in Notifications</span>
+      </div>
+      <div class="card-body">
+        <div class="fgrid g4">
+          <div class="ff">
+            <label>Pay Type</label>
+            <select id="fPayType" onchange="schedSave()">
+              <option value="">— Select —</option>
+              <option>Hourly</option>
+              <option>Salary</option>
+            </select>
+          </div>
+          <div class="ff">
+            <label>Rate of Pay</label>
+            <input type="text" id="fPayRate" placeholder="e.g. 28 or 95000" oninput="schedSave()">
+          </div>
+          <div class="ff">
+            <label>Sign-On Bonus</label>
+            <input type="text" id="fSignOn" placeholder="Amount" oninput="schedSave()">
+          </div>
+          <div class="ff">
+            <label>Phone Allowance</label>
+            <input type="text" id="fPhoneAllowance" placeholder="Amount if applicable" oninput="schedSave()">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CARD: Scheduling -->
+    <div class="card">
+      <div class="card-hdr"><h3>Scheduling</h3></div>
+      <div class="card-body">
+        <div class="fgrid g2">
+          <div class="ff">
+            <label>Expected Start Date</label>
+            <input type="date" id="fStart" oninput="schedSave()">
+          </div>
+          <!-- Jobsite: Craft + Field Supervision only -->
+          <div class="ff cond-section hidden-section" id="condJobsite">
+            <label>Expected Jobsite</label>
+            <input type="text" id="fJobsite" placeholder="e.g. Barksdale AFB" oninput="schedSave()">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CARD: Company Assets — Field Supervision + Professional only -->
+    <div class="card cond-section hidden-section" id="condAssets">
+      <div class="card-hdr">
+        <h3>Company Assets Needed</h3>
+        <span class="cond-pill">Field Supervision &amp; Professional</span>
+      </div>
+      <div class="card-body">
+        <div class="asset-grid" id="assetGrid">
+          <label class="asset-cb"><input type="checkbox" value="Office Space" onchange="updateAssetStyle(this);schedSave()"> Office Space</label>
+          <label class="asset-cb"><input type="checkbox" value="Amex" onchange="updateAssetStyle(this);schedSave()"> Amex</label>
+          <label class="asset-cb"><input type="checkbox" value="Laptop" onchange="updateAssetStyle(this);schedSave()"> Laptop</label>
+          <label class="asset-cb"><input type="checkbox" value="iPad" onchange="updateAssetStyle(this);schedSave()"> iPad</label>
+          <label class="asset-cb"><input type="checkbox" value="Company Truck" onchange="updateAssetStyle(this);schedSave()"> Company Truck</label>
+          <label class="asset-cb"><input type="checkbox" value="Fuel Card" onchange="updateAssetStyle(this);schedSave()"> Fuel Card</label>
+        </div>
+      </div>
+    </div>
+
+    <!-- CARD: PPE Sizes — Craft + Field Supervision only -->
+    <div class="card cond-section hidden-section" id="condPPE">
+      <div class="card-hdr">
+        <h3>PPE Sizes</h3>
+        <span class="cond-pill">Craft &amp; Field Supervision</span>
+      </div>
+      <div class="card-body">
+        <div class="ppe-grid">
+          <div class="ppe-cat ff">
+            <label>Gloves</label>
+            <select id="ppeGloves" onchange="schedSave()">
+              <option value="">— Select —</option>
+              <option>Small</option><option>Medium</option><option>Large</option><option>XL</option>
+            </select>
+          </div>
+          <div class="ppe-cat ff">
+            <label>Shirt</label>
+            <select id="ppeShirt" onchange="schedSave()">
+              <option value="">— Select —</option>
+              <option>Small</option><option>Medium</option><option>Large</option><option>XL</option>
+              <option>2XL</option><option>3XL</option><option>4XL</option><option>5XL</option>
+            </select>
+          </div>
+          <div class="ppe-cat ff">
+            <label>Vest</label>
+            <select id="ppeVest" onchange="schedSave()">
+              <option value="">— Select —</option>
+              <option>Small</option><option>Medium</option><option>Large</option><option>XL</option>
+              <option>2XL</option><option>3XL</option><option>4XL</option><option>5XL</option>
+            </select>
+          </div>
+          <div class="ppe-cat ff">
+            <label>FRC</label>
+            <select id="ppeFRC" onchange="schedSave()">
+              <option value="">— Select —</option>
+              <option>Small</option><option>Medium</option><option>Large</option><option>XL</option>
+              <option>2XL</option><option>3XL</option><option>4XL</option><option>5XL</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CARD: Equipment — Craft + Field Supervision only -->
+    <div class="card cond-section hidden-section" id="condEquipment">
+      <div class="card-hdr">
+        <h3>Equipment List</h3>
+        <span class="cond-pill">Craft &amp; Field Supervision</span>
+      </div>
+      <div class="card-body">
+        <div class="ff">
+          <label>Select all equipment this employee is certified to operate</label>
+          <div class="multi-select-wrap">
+            <div class="multi-select-list" id="equipmentList">
+              <!-- Built by JS -->
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CARD: Comments -->
+    <div class="card">
+      <div class="card-hdr"><h3>Comments</h3></div>
+      <div class="card-body">
+        <div class="ff">
+          <textarea id="fComments" placeholder="Any additional notes for this employee's onboarding…" oninput="schedSave()"></textarea>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /form-view-wrap -->
+
+  <!-- Form footer -->
+  <div class="form-footer">
+    <div class="save-status saved" id="saveStatus">✓ All changes saved</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="btn btn-secondary btn-sm" id="btnOpenChecklist" onclick="openChecklist()" style="display:none;">View Checklist →</button>
+      <button class="btn btn-notify btn-sm" id="btnNotify" onclick="openNotifyModal()" style="display:none;">✉ Send Notifications</button>
+      <button class="btn btn-primary" onclick="saveForm()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<!-- VIEW: CHECKLIST                        -->
+<!-- ═══════════════════════════════════════ -->
+<div id="viewChecklist" class="view">
+  <div class="cl-view-wrap">
+    <div class="cl-fin-banner hidden" id="clFinBanner">✅ This onboarding has been finalized and is read-only.</div>
+    <div class="cl-prog-bar">
+      <div class="pb-bg"><div class="pb-fill" id="pbFill" style="width:0%"></div></div>
+      <div class="pb-lbl" id="pbLbl">0 / 0 complete</div>
+    </div>
+    <div id="clSections"></div>
+    <div class="audit-panel">
+      <div class="audit-hdr">📋 Audit Log</div>
+      <div class="audit-log" id="auditLog"><div class="audit-entry empty">No activity yet.</div></div>
+    </div>
+  </div>
+  <div class="cl-action-bar">
+    <div class="save-status saved" id="clSaveStatus">✓ All changes saved</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="btn btn-secondary btn-sm" onclick="exportAudit()">Export Audit Log</button>
+      <button class="btn btn-secondary btn-sm" onclick="window.print()">Print</button>
+      <button class="btn btn-finalize btn-sm" id="finalizeBtn" onclick="openFinalizeModal()">Finalize &amp; Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODAL: Notifications ═══ -->
+<div class="modal-overlay hidden" id="notifyModal">
+  <div class="modal" style="max-width:580px;">
+    <div class="modal-hdr blue">✉ Send Onboarding Notifications</div>
+    <div class="modal-body">
+      <p style="font-size:13px;color:var(--muted);line-height:1.6;" id="notifyIntro"></p>
+      <div id="notifyGroups"></div>
+
+    </div>
+    <div class="modal-ftr">
+      <button class="btn btn-secondary" onclick="closeNotifyModal()">Cancel</button>
+      <button class="btn btn-notify" id="sendNotifyBtn" onclick="sendNotifications()">Send All</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODAL: Finalize ═══ -->
+<div class="modal-overlay hidden" id="finalizeModal">
+  <div class="modal" style="max-width:480px;">
+    <div class="modal-hdr green">Finalize &amp; Close Onboarding</div>
+    <div class="modal-body">
+      <div class="finalize-box"><p id="finalizeMsg"></p></div>
+      <p style="font-size:12.5px;color:var(--muted);line-height:1.65;">Finalizing marks this onboarding <strong>complete and read-only</strong>. All data and audit logs are preserved.</p>
+    </div>
+    <div class="modal-ftr">
+      <button class="btn btn-secondary" onclick="closeFinalizeModal()">Cancel</button>
+      <button class="btn btn-finalize" onclick="confirmFinalize()">✓ Finalize</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODAL: Delete ═══ -->
+<div class="modal-overlay hidden" id="deleteModal">
+  <div class="modal" style="max-width:460px;">
+    <div class="modal-hdr red">Delete Employee Record</div>
+    <div class="modal-body">
+      <p style="font-size:14px;line-height:1.6;" id="deleteMsg"></p>
+      <p style="font-size:12px;color:var(--muted);margin-top:8px;">This cannot be undone. All data and audit logs will be permanently deleted.</p>
+    </div>
+    <div class="modal-ftr">
+      <button class="btn btn-secondary" onclick="closeDeleteModal()">Cancel</button>
+      <button class="btn btn-danger" onclick="confirmDelete()">Delete</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════════
+// ⚙️  NOTIFICATION CONFIG — Power Automate
+// ═══════════════════════════════════════════════
+const NOTIFY_CONFIG = {
+  flowUrl: 'https://default8bda83c3f559480fbae42af4aadca9.4b.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/694977115f8a4ad4b82e92f1244326ca/triggers/manual/paths/invoke?api-version=1',
+  secretKey: 'Honor1420!'
+};
+const RECIPIENTS={
+  guardian: 'guardian@yourcompany.com',
+  kacie:    'kacie@yourcompany.com',
+  it:       'it@yourcompany.com',
+  assets:   'assets@yourcompany.com',
+};
+
+// ═══════════════════════════════════════════════
+// EQUIPMENT OPTIONS
+// ═══════════════════════════════════════════════
+const EQUIPMENT_OPTIONS=[
+  'Dozer','Excavator','Forklift','Lattice Crane','Loader/Backhoe',
+  'Manlift','Motorgrader','Off-Road Dump Truck','Roller',
+  'Rough Terrain Crane','Skid Steer','Stabilizer','Telehandler',
+  'Tractor','Water Truck'
+];
+
+// ═══════════════════════════════════════════════
+// COMPLIANCE CHECKLIST
+// ═══════════════════════════════════════════════
+const SECTIONS=[
+  {id:"recruitment",title:"Recruitment Process Compliance",items:[
+    {id:"r1",l:"Application Submitted"},
+    {id:"r2",l:"PPE Sizes on App"},
+    {id:"r3",l:"Equipment Listed on App (if an operator)"},
+    {id:"r4",l:"Drug and Alcohol Clearance Included on the App"},
+    {id:"r5",l:"Change Stage to Conditional Offer"},
+    {id:"r6",l:"Transfer Applicant to Onboarding"},
+    {id:"r7",l:"Assign Onboarding Profile to Candidate"},
+  ]},
+  {id:"docsetup",title:"Onboarding Document Setup",items:[
+    {id:"d1",l:"Confirm if Employee needs to be Attached to Rehire Profile"},
+    {id:"d2",l:"Create and Attach Offer Letter to Onboarding Packet"},
+    {id:"d3",l:"Confirm All Onboarding Packets Include:"},
+    {id:"d4",l:"Voluntary Self-Identification",s:1},
+    {id:"d5",l:"I-9",s:1},
+    {id:"d6",l:"W-4 — Federal Tax Form",s:1},
+    {id:"d7",l:"State Tax Withholding Form",s:1},
+    {id:"d8",l:"Direct Deposit",s:1},
+    {id:"d9",l:"Emergency Contacts",s:1},
+    {id:"d10",l:"Driver's License Upload Field",s:1},
+    {id:"d11",l:"Other IDs (Social Security, Passport, Work VISA, Etc.) Upload Field",s:1},
+    {id:"d12",l:"Employee Handbook — For the Hiring Company",s:1},
+    {id:"d13",l:"LA Second Injury Form",s:1},
+    {id:"d14",l:"Motor Fleet Safety Program",s:1},
+    {id:"d15",l:"Current Benefits Guide",s:1},
+    {id:"d16",l:"401K Enrollment Guide",s:1},
+    {id:"d17",l:"If Operator or Field Supervisor — Add: Operator's Creed",s:1},
+    {id:"d18",l:"If General Sand & Gravel Employee — Add: GSG Truck Driver Policy",s:1},
+  ]},
+  {id:"timeline",title:"Onboarding Timeline",items:[
+    {id:"t1",l:"Call Candidate and Confirm:"},
+    {id:"t2",l:"Medical/Drug Screening Date confirmed",s:1},
+    {id:"t3",l:"Medical/Drug Screening Location confirmed",s:1},
+    {id:"t4",l:"Orientation Date confirmed",s:1},
+    {id:"t5",l:"Start Date confirmed",s:1},
+    {id:"t6",l:"Schedule Pre-Screening Services:"},
+    {id:"t7",l:"Background check scheduled",s:1},
+    {id:"t8",l:"Impact Employees — Shell Norco Background submitted",s:1},
+    {id:"t9",l:"Occ Med and DISA scheduled",s:1},
+    {id:"t10",l:"Non-DOT Physical — Audiometric Exam",s:1},
+    {id:"t11",l:"Non-DOT Physical — Pulmonary Function Exam",s:1},
+    {id:"t12",l:"Non-DOT Physical — 10 Panel Instant",s:1},
+    {id:"t13",l:"Non-DOT Physical — DCCHT",s:1},
+    {id:"t14",l:"Non-DOT Physical — DCCOF",s:1},
+    {id:"t15",l:"DISA Authorization # included on form",s:1},
+  ]},
+  {id:"comms",title:"Onboarding Communications",items:[
+    {id:"c1",l:"Guardian notified — PPE order placed"},
+    {id:"c2",l:"Guardian notified — Site Access scheduled"},
+    {id:"c3",l:"Text Candidate — Time and Location of Drug Screens"},
+    {id:"c4",l:"Text Candidate — Time and Location of Orientation"},
+    {id:"c5",l:"Text Candidate — Link and Credentials to Onboarding Profile"},
+  ]},
+  {id:"completion",title:"Onboarding Completion",items:[
+    {id:"oc1",l:"Confirm All Onboarding Documents are Completed"},
+    {id:"oc2",l:"Complete E-Verify"},
+    {id:"oc3",l:"Upload Occ Med Results to Onboarding Profile"},
+    {id:"oc4",l:"Upload DISA Results to Onboarding Profile"},
+    {id:"oc5",l:"Upload Background Results to Onboarding Profile"},
+    {id:"oc6",l:"Confirm Kacie has all Assets ready for Start Date"},
+  ]},
+  {id:"init",title:"System Initialization",items:[
+    {id:"i1",l:"Confirm Candidate Showed for Safety Orientation before Initializing"},
+    {id:"i2",l:"HR Company Selected"},{id:"i3",l:"Expected Hire Date Completed"},
+    {id:"i4",l:"EEOC Gender Completed"},{id:"i5",l:"FR Reference Number Completed"},
+    {id:"i6",l:"Race Completed"},{id:"i7",l:"Hourly/Salary Completed"},
+    {id:"i8",l:"PR Company Completed"},{id:"i9",l:"Insurance Code Completed"},
+    {id:"i10",l:'Select "Non Union" For Craft'},{id:"i11",l:"Class Selected"},
+    {id:"i12",l:"PR Department Selected"},{id:"i13",l:"Earn Code Selected"},
+    {id:"i14",l:"Occupational Category Selected"},{id:"i15",l:"Position Code Selected"},
+    {id:"i16",l:"Employment Status Selected"},{id:"i17",l:"Overtime Schedule Selected"},
+    {id:"i18",l:"Initialize"},
+  ]},
+  {id:"hrfinal",title:"HR Final Steps",items:[
+    {id:"h1",l:"Complete HR Orientation"},{id:"h2",l:"Asset Training Orientation"},
+    {id:"h3",l:"Confirm User Access in Web Portal"},
+    {id:"h4",l:"Add Employee to Web Portal Groups"},
+    {id:"h5",l:"Add Employee to Text Magic"},{id:"h6",l:"Add Employee to Nationwide"},
+    {id:"h7",l:"Add Employee to Navigator"},{id:"h8",l:"Send New Hire to DCFS"},
+  ]},
+];
+const TOTAL=SECTIONS.reduce((n,s)=>n+s.items.length,0);
+
+// ═══════════════════════════════════════════════
+// APP STATE
+// ═══════════════════════════════════════════════
+let roster=[], currentUser='', currentId=null, empSt=null;
+let rosterTab='active', saveTO=null, clSaveTO=null, deleteId=null, progCache={};
+let prevView='roster'; // for back button
+
+// ═══════════════════════════════════════════════
+// MICROSOFT GRAPH CONFIG
+// ═══════════════════════════════════════════════
+const GRAPH_CONFIG = {
+  clientId: '3695598c-3996-4a83-8184-0c443fe253ff',
+  authority: 'https://login.microsoftonline.com/common',
+  scopes: ['Files.ReadWrite.All', 'User.Read'],
+  driveBase: 'https://graph.microsoft.com/v1.0/sites/brownind.sharepoint.com:/sites/Root-HR:/drive',
+  folder: '1. Onboarding',
+  rosterFile: 'ob-roster.json',
+  clFile: 'ob-checklists.json'
+};
+
+let msalInstance=null, msalAccount=null;
+
+// ═══════════════════════════════════════════════
+// MSAL AUTH
+// ═══════════════════════════════════════════════
+function loadScript(src){
+  return new Promise((res,rej)=>{
+    if(document.querySelector(`script[src="${src}"]`)){res();return;}
+    const s=document.createElement('script');s.src=src;s.onload=res;s.onerror=rej;
+    document.head.appendChild(s);
+  });
+}
+
+async function initAuth(){
+  await loadScript('https://alcdn.msauth.net/browser/2.38.3/js/msal-browser.min.js');
+  msalInstance=new msal.PublicClientApplication({
+    auth:{clientId:GRAPH_CONFIG.clientId,authority:GRAPH_CONFIG.authority,redirectUri:'https://lively-hill-0ad745610.1.azurestaticapps.net'},
+    cache:{cacheLocation:'localStorage',storeAuthStateInCookie:true}
+  });
+  await msalInstance.initialize();
+  try{await msalInstance.handleRedirectPromise();}catch(e){}
+  const accounts=msalInstance.getAllAccounts();
+  if(accounts.length>0) msalAccount=accounts[0];
+}
+
+async function getToken(){
+  try{
+    const r=msalAccount
+      ?await msalInstance.acquireTokenSilent({scopes:GRAPH_CONFIG.scopes,account:msalAccount})
+      :await msalInstance.acquireTokenPopup({scopes:GRAPH_CONFIG.scopes});
+    msalAccount=r.account; return r.accessToken;
+  }catch(e){
+    const r=await msalInstance.acquireTokenPopup({scopes:GRAPH_CONFIG.scopes});
+    msalAccount=r.account; return r.accessToken;
+  }
+}
+
+async function signIn(){
+  try{
+    const r=await msalInstance.loginPopup({scopes:GRAPH_CONFIG.scopes});
+    msalAccount=r.account; return true;
+  }catch(e){return false;}
+}
+
+// ═══════════════════════════════════════════════
+// GRAPH FILE I/O
+// ═══════════════════════════════════════════════
+function fileUrl(name){
+  return `${GRAPH_CONFIG.driveBase}/root:/${GRAPH_CONFIG.folder}/${name}:/content`;
+}
+
+async function readJsonFile(name){
+  try{
+    const token=await getToken();
+    const resp=await fetch(fileUrl(name),{headers:{Authorization:'Bearer '+token}});
+    if(resp.status===404) return null;
+    if(!resp.ok) throw new Error(resp.status);
+    return await resp.json();
+  }catch(e){return null;}
+}
+
+async function writeJsonFile(name,data){
+  const token=await getToken();
+  const resp=await fetch(fileUrl(name),{
+    method:'PUT',
+    headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},
+    body:JSON.stringify(data)
+  });
+  if(!resp.ok) throw new Error('Write failed: '+resp.status);
+}
+
+// ═══════════════════════════════════════════════
+// STORAGE — Microsoft Graph / SharePoint
+// ═══════════════════════════════════════════════
+async function loadRoster(){
+  setStatus('Loading roster…');
+  roster=(await readJsonFile(GRAPH_CONFIG.rosterFile))||[];
+  setStatus('');
+}
+
+async function saveRoster(){
+  await writeJsonFile(GRAPH_CONFIG.rosterFile,roster).catch(e=>showToast('Save failed: '+e.message,'#991b1b'));
+}
+
+async function loadEmp(id){
+  const all=(await readJsonFile(GRAPH_CONFIG.clFile))||{};
+  return all[id]||{checks:{},auditLog:[],collapsed:{}};
+}
+
+async function persistEmp(){
+  if(!currentId||!empSt)return;
+  try{
+    const all=(await readJsonFile(GRAPH_CONFIG.clFile))||{};
+    all[currentId]=empSt;
+    await writeJsonFile(GRAPH_CONFIG.clFile,all);
+  }catch(e){showToast('Checklist save failed: '+e.message,'#991b1b');}
+}
+
+async function saveEmployee(emp){await saveRoster();}
+
+async function deleteEmployee(id){
+  roster=roster.filter(x=>x.id!==id);
+  await saveRoster();
+  try{const all=(await readJsonFile(GRAPH_CONFIG.clFile))||{};delete all[id];await writeJsonFile(GRAPH_CONFIG.clFile,all);}catch(e){}
+}
+
+async function loadAllProgress(){
+  const all=(await readJsonFile(GRAPH_CONFIG.clFile))||{};
+  for(const id in all){progCache[id]=all[id].checks||{};}
+}
+
+// ═══════════════════════════════════════════════
+// STATUS BAR
+// ═══════════════════════════════════════════════
+function setStatus(msg){
+  let el=document.getElementById('statusBar');
+  if(!el){el=document.createElement('div');el.id='statusBar';el.style.cssText='position:fixed;top:54px;left:0;right:0;background:#333F50;color:#a0b4c8;font-family:var(--mono);font-size:11px;padding:7px 28px;z-index:190;text-align:center;';document.body.appendChild(el);}
+  el.textContent=msg;el.style.display=msg?'block':'none';
+}
+
+// ═══════════════════════════════════════════════
+// LOGIN SCREEN
+// ═══════════════════════════════════════════════
+function showLoginScreen(){
+  const d=document.createElement('div');d.id='loginScreen';
+  d.style.cssText='display:flex;align-items:center;justify-content:center;min-height:calc(100vh - 54px);';
+  d.innerHTML=`<div style="background:white;border:1px solid var(--border);border-radius:8px;padding:44px 52px;text-align:center;max-width:420px;box-shadow:0 4px 24px rgba(0,0,0,.08);">
+    <div style="font-size:36px;margin-bottom:16px;">🔐</div>
+    <h2 style="font-size:18px;font-weight:700;margin-bottom:8px;color:var(--dark);">Sign in to continue</h2>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:28px;line-height:1.65;">Use your Brown Industries Microsoft account to access the Onboarding Tracker. Your changes will sync automatically for all team members.</p>
+    <button onclick="handleSignIn()" class="btn btn-primary" style="width:100%;justify-content:center;font-size:14px;padding:11px;">Sign in with Microsoft</button>
+  </div>`;
+  document.body.appendChild(d);
+}
+
+async function handleSignIn(){
+  const btn=document.querySelector('#loginScreen .btn-primary');
+  btn.textContent='Signing in…';btn.disabled=true;
+  const ok=await signIn();
+  if(ok){
+    document.getElementById('loginScreen')?.remove();
+    await loadApp();
+  }else{
+    btn.textContent='Sign in with Microsoft';btn.disabled=false;
+    showToast('Sign in failed — please try again','#991b1b');
+  }
+}
+
+async function loadApp(){
+  // Get user's name from Microsoft profile
+  try{
+    const token=await getToken();
+    const me=await(await fetch('https://graph.microsoft.com/v1.0/me',{headers:{Authorization:'Bearer '+token}})).json();
+    currentUser=me.displayName||me.userPrincipalName||'';
+    document.getElementById('currentUser').value=currentUser;
+  }catch(e){}
+  setStatus('Loading data…');
+  await loadRoster();
+  await loadAllProgress();
+  setStatus('');
+  buildEquipmentList([]);
+  document.getElementById('viewRoster').classList.add('active');
+  renderRoster();
+}
+
+// ═══════════════════════════════════════════════
+// UTILS
+// ═══════════════════════════════════════════════
+function progress(checks){const done=Object.values(checks).filter(c=>c.checked).length;return{done,total:TOTAL,pct:Math.round(done/TOTAL*100)};}
+function todayISO(){return new Date().toISOString().slice(0,10);}
+function fmtD(d){if(!d)return'—';try{const[y,m,day]=d.split('-');return new Date(+y,+m-1,+day).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'});}catch(e){return d;}}
+function fmtDT(iso){if(!iso)return'';try{return new Date(iso).toLocaleString(undefined,{month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit'});}catch(e){return iso;}}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function showToast(msg,color){const t=document.getElementById('toast');t.textContent=msg;t.style.background=color||'#333F50';t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2800);}
+function isConfigured(){return true;}
+function buildPPE(e){const p=[];if(e.ppeGloves)p.push('Gloves - '+e.ppeGloves);if(e.ppeShirt)p.push('Shirt - '+e.ppeShirt);if(e.ppeVest)p.push('Vest - '+e.ppeVest);if(e.ppeFRC)p.push('FRC - '+e.ppeFRC);return p.join(', ')||'—';}
+
+// ═══════════════════════════════════════════════
+// EQUIPMENT MULTI-SELECT
+// ═══════════════════════════════════════════════
+function buildEquipmentList(selected){
+  const el=document.getElementById('equipmentList');
+  el.innerHTML=EQUIPMENT_OPTIONS.map(opt=>{
+    const sel=(selected||[]).includes(opt);
+    return`<div class="ms-item${sel?' selected':''}" onclick="toggleEquipment(this,'${opt}')">
+      <div class="ms-cb"><span class="ms-ck">✓</span></div>
+      <span class="ms-label">${opt}</span>
+    </div>`;
+  }).join('');
+}
+function toggleEquipment(el,val){
+  el.classList.toggle('selected');
+  schedSave();
+}
+function getSelectedEquipment(){
+  return[...document.querySelectorAll('#equipmentList .ms-item.selected')].map(el=>el.querySelector('.ms-label').textContent);
+}
+
+// ═══════════════════════════════════════════════
+// ASSET CHECKBOXES
+// ═══════════════════════════════════════════════
+function updateAssetStyle(cb){cb.closest('.asset-cb').classList.toggle('checked',cb.checked);}
+function getSelectedAssets(){return[...document.querySelectorAll('#assetGrid input:checked')].map(x=>x.value);}
+function setAssets(assets){
+  document.querySelectorAll('#assetGrid input').forEach(cb=>{cb.checked=(assets||[]).includes(cb.value);updateAssetStyle(cb);});
+}
+
+// ═══════════════════════════════════════════════
+// CONDITIONAL SECTION VISIBILITY
+// ═══════════════════════════════════════════════
+function handlePosTypeChange(){
+  const pt=document.getElementById('fPosType').value;
+  const isCraft      = pt==='Craft';
+  const isField      = pt==='Field Supervision';
+  const isPro        = pt==='Professional';
+  const craftOrField = isCraft||isField;
+  const fieldOrPro   = isField||isPro;
+
+  // Jobsite: Craft + Field Supervision
+  document.getElementById('condJobsite').classList.toggle('hidden-section', !craftOrField);
+  // Company Assets: Field Supervision + Professional
+  document.getElementById('condAssets').classList.toggle('hidden-section', !fieldOrPro);
+  // PPE: Craft + Field Supervision
+  document.getElementById('condPPE').classList.toggle('hidden-section', !craftOrField);
+  // Equipment: Craft + Field Supervision
+  document.getElementById('condEquipment').classList.toggle('hidden-section', !craftOrField);
+}
+
+// ═══════════════════════════════════════════════
+// ROSTER
+// ═══════════════════════════════════════════════
+function setTab(t){
+  rosterTab=t;
+  ['active','finalized','all'].forEach(x=>document.getElementById('tab'+x[0].toUpperCase()+x.slice(1)).classList.toggle('active',x===t));
+  renderRoster();
+}
+
+function renderRoster(){
+  const q=document.getElementById('rSearch').value.toLowerCase();
+  let rows=roster.filter(e=>{
+    if(rosterTab==='active'&&e.status!=='active')return false;
+    if(rosterTab==='finalized'&&e.status!=='finalized')return false;
+    if(q&&!(e.name+e.company+(e.position||'')).toLowerCase().includes(q))return false;
+    return true;
+  }).sort((a,b)=>{
+    const ta=a.status==='finalized'?(a.finalizedAt||''):(a.createdAt||'');
+    const tb=b.status==='finalized'?(b.finalizedAt||''):(b.createdAt||'');
+    return tb>ta?1:-1;
+  });
+  const tbody=document.getElementById('rosterBody');
+  const empty=document.getElementById('emptyState');
+  if(!rows.length){tbody.innerHTML='';empty.classList.remove('hidden');return;}
+  empty.classList.add('hidden');
+  tbody.innerHTML=rows.map(e=>{
+    const pg=progress(progCache[e.id]||{});
+    const fin=e.status==='finalized';
+    const notBadge=e.notified?`<span class="badge badge-notified" title="Notifications sent">✉</span>`:'';
+    const badge=fin?`<span class="badge badge-done">✓ Finalized</span>${notBadge}`:`<span class="badge badge-active">● Active</span>${notBadge}`;
+    const barCls=pg.pct===100?'mini-bar-fill full':'mini-bar-fill';
+    return`<tr class="${fin?'fin-row':''}" onclick="openIntakeForm('${e.id}')">
+      <td><div class="emp-name">${esc(e.name||'—')}</div>${e.posType?`<div class="emp-sub">${esc(e.posType)}</div>`:''}</td>
+      <td>${esc(e.company||'—')}</td>
+      <td>${esc(e.position||'—')}</td>
+      <td style="font-family:var(--mono);font-size:12px">${e.start?fmtD(e.start):'—'}</td>
+      <td><div class="mini-bar"><div class="mini-bar-bg"><div class="${barCls}" style="width:${pg.pct}%"></div></div><span class="mini-pct">${pg.done}/${pg.total}</span></div></td>
+      <td>${badge}</td>
+      <td class="row-actions" onclick="event.stopPropagation()">
+        <button class="btn btn-secondary btn-sm" onclick="openIntakeForm('${e.id}')">Open</button>
+        <button class="btn btn-danger btn-sm" onclick="openDeleteModal('${e.id}')">Del</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+async function loadAllProgress(){for(const e of roster){const st=await loadEmp(e.id);progCache[e.id]=st.checks;}}
+
+// ═══════════════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════════════
+function showView(name){
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.getElementById('view'+name[0].toUpperCase()+name.slice(1)).classList.add('active');
+}
+
+function handleBack(){
+  if(prevView==='form'){
+    // From checklist, go back to form
+    showView('form');
+    document.getElementById('gTitle').textContent=currentEmpName()||'Employee';
+    document.getElementById('gSub').textContent='';
+    document.getElementById('backBtn').textContent='← Roster';
+    prevView='roster';
+  } else {
+    goRoster();
+  }
+}
+
+function goRoster(){
+  currentId=null; empSt=null; prevView='roster';
+  showView('roster');
+  document.getElementById('backWrap').style.display='none';
+  document.getElementById('gTitle').textContent='Onboarding Tracker';
+  document.getElementById('gSub').textContent='Honor Model · Craft & Field Supervisor';
+  renderRoster();
+}
+
+function currentEmpName(){
+  const e=roster.find(x=>x.id===currentId);return e?.name||'Employee';
+}
+
+// ═══════════════════════════════════════════════
+// INTAKE FORM
+// ═══════════════════════════════════════════════
+async function openIntakeForm(id){
+  currentId=id;
+  empSt=id?(await loadEmp(id)):{checks:{},auditLog:[],collapsed:{}};
+  const e=id?roster.find(x=>x.id===id):null;
+
+  showView('form');
+  prevView='roster';
+  document.getElementById('backWrap').style.display='block';
+  document.getElementById('backBtn').textContent='← Roster';
+
+  if(e){
+    document.getElementById('gTitle').textContent=e.name||'Employee';
+    document.getElementById('gSub').textContent=(e.company||'')+(e.position?' · '+e.position:'');
+    document.getElementById('formTitle').textContent=e.name||'Employee';
+    document.getElementById('formSub').textContent=(e.company||'')+(e.position?' · '+e.position:'');
+    populateForm(e);
+    const fin=e.status==='finalized';
+    document.getElementById('btnOpenChecklist').style.display='inline-flex';
+    document.getElementById('btnNotify').style.display=fin?'none':'inline-flex';
+    // Make form readonly if finalized
+    setFormReadonly(fin);
+  } else {
+    document.getElementById('gTitle').textContent='New Employee';
+    document.getElementById('gSub').textContent='';
+    document.getElementById('formTitle').textContent='New Employee';
+    document.getElementById('formSub').textContent='Complete all required fields and save to create the onboarding record.';
+    clearForm();
+    document.getElementById('btnOpenChecklist').style.display='none';
+    document.getElementById('btnNotify').style.display='none';
+    setFormReadonly(false);
+  }
+  setSaveStatus('saved');
+  window.scrollTo(0,0);
+}
+
+function setFormReadonly(readonly){
+  document.querySelectorAll('.form-view-wrap input:not([readonly]), .form-view-wrap select, .form-view-wrap textarea').forEach(el=>{
+    el.disabled=readonly;
+  });
+  document.querySelectorAll('.asset-cb, .ms-item').forEach(el=>{
+    el.style.pointerEvents=readonly?'none':'';
+    el.style.opacity=readonly?'.7':'';
+  });
+  document.querySelector('.form-footer .btn-primary').style.display=readonly?'none':'inline-flex';
+}
+
+function clearForm(){
+  document.getElementById('fOnboardStart').value=todayISO();
+  ['fPosition','fPayRate','fSignOn','fPhoneAllowance','fStart','fJobsite','fComments',
+   'ppeGloves','ppeShirt','ppeVest','ppeFRC'].forEach(x=>{const el=document.getElementById(x);if(el)el.value='';});
+  document.getElementById('fCompany').value='';
+  document.getElementById('fPosType').value='';
+  document.getElementById('fPayType').value='';
+  setAssets([]);
+  buildEquipmentList([]);
+  // Hide all conditional sections
+  document.getElementById('condJobsite').classList.add('hidden-section');
+  document.getElementById('condAssets').classList.add('hidden-section');
+  document.getElementById('condPPE').classList.add('hidden-section');
+  document.getElementById('condEquipment').classList.add('hidden-section');
+}
+
+function populateForm(e){
+  const set=(id,v)=>{const el=document.getElementById(id);if(el)el.value=v||'';};
+  set('fOnboardStart', e.onboardStart||todayISO());
+  set('fCompany', e.company); set('fName', e.name);
+  set('fPosType', e.posType); set('fPosition', e.position);
+  set('fPayType', e.payType); set('fPayRate', e.payRate);
+  set('fSignOn', e.signOn); set('fPhoneAllowance', e.phoneAllowance);
+  set('fStart', e.start); set('fJobsite', e.jobsite);
+  set('ppeGloves', e.ppeGloves); set('ppeShirt', e.ppeShirt);
+  set('ppeVest', e.ppeVest); set('ppeFRC', e.ppeFRC);
+  set('fComments', e.comments);
+  setAssets(e.assets||[]);
+  buildEquipmentList(e.equipment||[]);
+  handlePosTypeChange();
+}
+
+function collectForm(){
+  const g=id=>document.getElementById(id)?.value||'';
+  return{
+    onboardStart: g('fOnboardStart'),
+    company:      g('fCompany').trim(),
+    name:         g('fName').trim(),
+    posType:      g('fPosType'),
+    position:     g('fPosition').trim(),
+    payType:      g('fPayType'),
+    payRate:      g('fPayRate').trim(),
+    signOn:       g('fSignOn').trim(),
+    phoneAllowance: g('fPhoneAllowance').trim(),
+    start:        g('fStart'),
+    jobsite:      g('fJobsite').trim(),
+    ppeGloves:    g('ppeGloves'),
+    ppeShirt:     g('ppeShirt'),
+    ppeVest:      g('ppeVest'),
+    ppeFRC:       g('ppeFRC'),
+    assets:       getSelectedAssets(),
+    equipment:    getSelectedEquipment(),
+    comments:     g('fComments').trim(),
+  };
+}
+
+function schedSave(){
+  if(!currentId) return;
+  if(saveTO) clearTimeout(saveTO);
+  setSaveStatus('saving');
+  saveTO=setTimeout(async()=>{
+    const e=roster.find(x=>x.id===currentId);
+    if(e){ Object.assign(e, collectForm()); await saveRoster(); }
+    setSaveStatus('saved');
+  }, 1200);
+}
+
+async function saveForm(silent=false){
+  const data=collectForm();
+  if(!data.name){showToast('Employee name is required.','#c8440a');return;}
+  if(!data.company){showToast('Hiring company is required.','#c8440a');return;}
+  setSaveStatus('saving');
+  if(currentId){
+    Object.assign(roster.find(x=>x.id===currentId), data);
+  } else {
+    const id='e'+Date.now();
+    currentId=id;
+    empSt={checks:{},auditLog:[],collapsed:{}};
+    roster.push({...data, id, status:'active', createdAt:new Date().toISOString()});
+    progCache[id]={};
+    document.getElementById('btnOpenChecklist').style.display='inline-flex';
+    document.getElementById('btnNotify').style.display='inline-flex';
+  }
+  await saveRoster();
+  await persistEmp();
+  progCache[currentId]=empSt.checks;
+  setSaveStatus('saved');
+  const e=roster.find(x=>x.id===currentId);
+  document.getElementById('gTitle').textContent=e.name||'Employee';
+  document.getElementById('formTitle').textContent=e.name||'Employee';
+  if(!silent) showToast('Saved ✓');
+}
+
+function setSaveStatus(s,el){
+  const id=el||'saveStatus';
+  const elem=document.getElementById(id);
+  if(!elem)return;
+  if(s==='saving'){elem.textContent='● Saving…';elem.className='save-status saving';}
+  else{elem.textContent='✓ All changes saved';elem.className='save-status saved';}
+}
+
+// ═══════════════════════════════════════════════
+// CHECKLIST VIEW
+// ═══════════════════════════════════════════════
+function openChecklist(){
+  if(!currentId){showToast('Save the employee first.','#c8440a');return;}
+  const e=roster.find(x=>x.id===currentId);
+  const fin=e?.status==='finalized';
+  prevView='form';
+  showView('checklist');
+  document.getElementById('backBtn').textContent='← Employee';
+  document.getElementById('gTitle').textContent=(e?.name||'Checklist')+' — Checklist';
+  document.getElementById('gSub').textContent=e?.company||'';
+  document.getElementById('clFinBanner').classList.toggle('hidden', !fin);
+  document.getElementById('finalizeBtn').style.display=fin?'none':'inline-flex';
+  renderChecklist(fin);
+  window.scrollTo(0,0);
+}
+
+function renderChecklist(fin){
+  const container=document.getElementById('clSections');
+  container.innerHTML='';
+  SECTIONS.forEach(sec=>{
+    const col=empSt.collapsed[sec.id];
+    const tot=sec.items.length;
+    const dn=sec.items.filter(it=>empSt.checks[it.id]?.checked).length;
+    const div=document.createElement('div');
+    div.className='cl-section'+(col?' collapsed':'');
+    div.innerHTML=`
+      <div class="cl-sec-hdr" onclick="toggleSec('${sec.id}')">
+        <h3>${sec.title}</h3>
+        <div class="cl-sec-meta">
+          <span class="cl-sec-count${dn===tot?' done':''}">${dn}/${tot}</span>
+          <span class="chevron">▼</span>
+        </div>
+      </div>
+      <div class="cl-sec-body">
+        ${sec.items.map(it=>{
+          const ck=empSt.checks[it.id]||{};
+          const checked=!!ck.checked;
+          const cls=`cl-item${checked?' checked':''}${it.s?' sub':''}${fin?' readonly':''}`;
+          const click=fin?'':` onclick="toggleItem('${it.id}')"`;
+          return`<div class="${cls}"${click}>
+            <div class="cl-cb"><span class="cl-ck">✓</span></div>
+            <div>
+              <div class="cl-item-lbl">${esc(it.l)}</div>
+              ${checked?`<div class="cl-item-who">✓ ${esc(ck.who||'Unknown')} — ${fmtDT(ck.when)}</div>`:''}
+            </div>
+          </div>`;
+        }).join('')}
+      </div>`;
+    container.appendChild(div);
+  });
+  updateClProgress();
+  renderAuditLog();
+}
+
+function toggleSec(id){
+  empSt.collapsed[id]=!empSt.collapsed[id];
+  schedClSave();
+  const e=roster.find(x=>x.id===currentId);
+  renderChecklist(e?.status==='finalized');
+}
+
+function toggleItem(id){
+  if(!currentUser){alert('Please enter your name at the top right before checking items.');document.getElementById('currentUser').focus();return;}
+  const was=!!empSt.checks[id]?.checked;
+  const now=new Date().toISOString();
+  const lbl=SECTIONS.flatMap(s=>s.items).find(it=>it.id===id)?.l||id;
+  empSt.checks[id]={checked:!was,who:currentUser,when:now};
+  empSt.auditLog.push({itemId:id,label:lbl,who:currentUser,when:now,action:was?'unchecked':'checked'});
+  schedClSave();
+  const e=roster.find(x=>x.id===currentId);
+  renderChecklist(e?.status==='finalized');
+}
+
+function schedClSave(){
+  if(clSaveTO)clearTimeout(clSaveTO);
+  setSaveStatus('saving','clSaveStatus');
+  clSaveTO=setTimeout(async()=>{
+    await persistEmp();
+    progCache[currentId]=empSt.checks;
+    setSaveStatus('saved','clSaveStatus');
+  },700);
+}
+
+function updateClProgress(){
+  const pg=progress(empSt.checks);
+  const fill=document.getElementById('pbFill');
+  fill.style.width=pg.pct+'%';
+  fill.className='pb-fill'+(pg.pct===100?' full':'');
+  document.getElementById('pbLbl').textContent=`${pg.done} / ${pg.total} complete`;
+}
+
+function renderAuditLog(){
+  const log=[...(empSt.auditLog||[])].reverse().slice(0,60);
+  document.getElementById('auditLog').innerHTML=log.length
+    ?log.map(x=>`<div class="audit-entry"><span class="aw">${esc(x.who||'Unknown')}</span><span class="${x.action==='checked'?'ac':'au'}"> ${x.action==='checked'?'✓ checked':'○ unchecked'}</span> — ${esc(x.label)}<br><span style="color:#bbb">${fmtDT(x.when)}</span></div>`).join('')
+    :'<div class="audit-entry empty">No activity yet.</div>';
+}
+
+// ═══════════════════════════════════════════════
+// NOTIFICATIONS
+// ═══════════════════════════════════════════════
+function buildNotifGroups(e){
+  const assets=e.assets||[];
+  const hasAsset=v=>assets.some(a=>a===v);
+  const itAssets=assets.filter(a=>['Laptop','iPad','Office Space'].includes(a));
+  const needsAssets=hasAsset('Company Truck')||hasAsset('Fuel Card');
+  const isCraftOrField=e.posType==='Craft'||e.posType==='Field Supervision';
+
+  return[
+    {
+      id:'guardian', name:'Guardian', to:RECIPIENTS.guardian,
+      subject:`New Hire — PPE & Site Access: ${e.name} | ${e.company}`,
+      skip: !isCraftOrField,
+      skipReason:'Not a Craft or Field Supervision employee — Guardian notification not needed.',
+      fields:[
+        ['Name',e.name],['Company',e.company],['Position Type',e.posType],['Job Title',e.position],
+        ['Expected Start Date',e.start?fmtD(e.start):null],
+        ['Expected Jobsite',e.jobsite],
+        ['PPE Sizes',buildPPE(e)],
+        ['Equipment List',(e.equipment||[]).join(', ')||null],
+      ],
+    },
+    {
+      id:'kacie', name:'Kacie', to:RECIPIENTS.kacie,
+      subject:`New Hire — Assets Ready: ${e.name} | ${e.company}`,
+      skip:false,
+      fields:[
+        ['Name',e.name],['Company',e.company],['Position Type',e.posType],['Job Title',e.position],
+        ['Expected Start Date',e.start?fmtD(e.start):null],
+        ['All Assets Needed',assets.length?assets.join(', '):null],
+        ['Comments',e.comments||null],
+      ],
+    },
+    {
+      id:'it', name:'IT', to:RECIPIENTS.it,
+      subject:`New Hire — IT Setup: ${e.name} | ${e.company}`,
+      skip:itAssets.length===0,
+      skipReason:'No IT assets (Laptop, iPad, Office Space) selected — IT notification not needed.',
+      fields:[
+        ['Name',e.name],['Company',e.company],['Position Type',e.posType],['Job Title',e.position],
+        ['Expected Start Date',e.start?fmtD(e.start):null],
+        ['IT Assets Needed',itAssets.join(', ')||null],
+      ],
+    },
+    {
+      id:'assets', name:'Asset Management', to:RECIPIENTS.assets,
+      subject:`New Hire — Company Truck/Fuel Card: ${e.name} | ${e.company}`,
+      skip:!needsAssets,
+      skipReason:'Company Truck and Fuel Card not selected — Asset Management not notified.',
+      fields:[
+        ['Name',e.name],['Company',e.company],['Position Type',e.posType],['Job Title',e.position],
+        ['Expected Start Date',e.start?fmtD(e.start):null],
+        ['Assets',assets.filter(a=>['Company Truck','Fuel Card'].includes(a)).join(', ')||null],
+      ],
+    },
+  ];
+}
+
+function buildEmailBody(g){
+  const lines=[`ONBOARDING NOTIFICATION — ${g.name.toUpperCase()}`,'─'.repeat(44),''];
+  g.fields.forEach(([l,v])=>{if(v)lines.push(`${l.padEnd(22)}: ${v}`);});
+  lines.push('','─'.repeat(44),`Sent ${new Date().toLocaleString()}`);
+  return lines.join('\n');
+}
+
+function openNotifyModal(){
+  const e=roster.find(x=>x.id===currentId);if(!e)return;
+  const groups=buildNotifGroups(e);
+  document.getElementById('notifyIntro').textContent=`Preparing notifications for ${e.name} (${e.company}). Review each group below, then click Send All.`;
+  document.getElementById('notifyGroups').innerHTML=groups.map(g=>`
+    <div class="notif-group${g.skip?' notif-skip':''}">
+      <div class="notif-group-hdr">
+        <div>${g.name}<span class="notif-to">→ ${g.to}</span></div>
+        <span class="nstat ${g.skip?'skipped':'pending'}" id="nstat_${g.id}">${g.skip?'Skip':'Pending'}</span>
+      </div>
+      ${g.skip
+        ?`<div class="notif-skip-reason">${g.skipReason}</div>`
+        :`<div class="notif-group-body"><pre style="font-family:var(--mono);font-size:10px;white-space:pre-wrap;line-height:1.5;">${esc(buildEmailBody(g))}</pre></div>`}
+    </div>`).join('');
+  const configured=true;
+  document.getElementById('notifyConfigWarn').classList.toggle('hidden',configured);
+  const btn=document.getElementById('sendNotifyBtn');
+  btn.disabled=!configured; btn.style.opacity=configured?'1':'.5';
+  document.getElementById('notifyModal').classList.remove('hidden');
+}
+function closeNotifyModal(){document.getElementById('notifyModal').classList.add('hidden');}
+
+async function sendNotifications(){
+  const e=roster.find(x=>x.id===currentId);if(!e)return;
+  const groups=buildNotifGroups(e);
+  const btn=document.getElementById('sendNotifyBtn');
+  btn.disabled=true; btn.textContent='Sending…';
+  let sent=0,errs=0;
+
+  for(const g of groups){
+    if(g.skip)continue;
+    const el=document.getElementById('nstat_'+g.id);
+    el.textContent='Sending…'; el.className='nstat pending';
+    try{
+      // Build payload for Power Automate
+      const payload={
+        employeeName: e.name||'',
+        company: e.company||'',
+        positionType: e.posType||'',
+        jobTitle: e.position||'',
+        startDate: e.start||'',
+        jobsite: e.jobsite||'',
+        ppeGloves: e.ppeGloves||'',
+        ppeShirt: e.ppeShirt||'',
+        ppeVest: e.ppeVest||'',
+        ppeFRC: e.ppeFRC||'',
+        equipment: (e.equipment||[]).join(', '),
+        assets: (e.assets||[]).join(', '),
+        recipientEmail: g.to,
+        recipientName: g.name,
+        emailSubject: g.subject,
+        emailBody: buildEmailBody(g)
+      };
+      const resp = await fetch(NOTIFY_CONFIG.flowUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-secret-key': NOTIFY_CONFIG.secretKey
+        },
+        body: JSON.stringify(payload)
+      });
+      if(!resp.ok) throw new Error('HTTP '+resp.status);
+      el.textContent='✓ Sent'; el.className='nstat sent'; sent++;
+    }catch(err){
+      el.textContent='✗ Error'; el.className='nstat error'; errs++;
+      console.error('Notification error for '+g.name, err);
+    }
+  }
+
+  const now=new Date().toISOString();
+  empSt.auditLog.push({itemId:'SYSTEM',label:`Notifications sent — ${sent} emails`,who:currentUser||'Unknown',when:now,action:'notified'});
+  e.notified=true; e.notifiedAt=now; e.notifiedBy=currentUser||'Unknown';
+  await saveRoster(); await persistEmp();
+  btn.disabled=false; btn.textContent=errs?`Done (${errs} error${errs>1?'s':''})`:'✓ All Sent';
+  if(!errs)showToast(`${sent} notification${sent!==1?'s':''} sent ✓`);
+  else showToast(`${sent} sent, ${errs} failed`,'#c8440a');
+  renderRoster();
+}
+
+// ═══════════════════════════════════════════════
+// FINALIZE
+// ═══════════════════════════════════════════════
+function openFinalizeModal(){
+  const e=roster.find(x=>x.id===currentId);
+  const pg=progress(empSt.checks);
+  document.getElementById('finalizeMsg').innerHTML=
+    `You are finalizing onboarding for <strong>${esc(e?.name||'this employee')}</strong>.<br><br>Progress: <strong>${pg.done} of ${pg.total} items</strong> complete (${pg.pct}%).`;
+  document.getElementById('finalizeModal').classList.remove('hidden');
+}
+function closeFinalizeModal(){document.getElementById('finalizeModal').classList.add('hidden');}
+async function confirmFinalize(){
+  const e=roster.find(x=>x.id===currentId);if(!e)return;
+  e.status='finalized'; e.finalizedBy=currentUser||'Unknown'; e.finalizedAt=new Date().toISOString();
+  empSt.auditLog.push({itemId:'SYSTEM',label:'Onboarding finalized',who:e.finalizedBy,when:e.finalizedAt,action:'finalized'});
+  await saveRoster();
+  await persistEmp();
+  closeFinalizeModal(); showToast('Onboarding finalized ✓');
+  document.getElementById('clFinBanner').classList.remove('hidden');
+  document.getElementById('finalizeBtn').style.display='none';
+  renderChecklist(true); renderRoster();
+}
+
+// ═══════════════════════════════════════════════
+// DELETE
+// ═══════════════════════════════════════════════
+function openDeleteModal(id){
+  deleteId=id;
+  const e=roster.find(x=>x.id===id);
+  document.getElementById('deleteMsg').textContent=`Are you sure you want to delete the record for ${e?.name||'this employee'}?`;
+  document.getElementById('deleteModal').classList.remove('hidden');
+}
+function closeDeleteModal(){document.getElementById('deleteModal').classList.add('hidden');}
+async function confirmDelete(){
+  if(!deleteId)return;
+  await deleteEmployee(deleteId);
+  delete progCache[deleteId];
+  closeDeleteModal(); renderRoster(); showToast('Record deleted');
+}
+
+// ═══════════════════════════════════════════════
+// EXPORT
+// ═══════════════════════════════════════════════
+function exportAudit(){
+  const e=roster.find(x=>x.id===currentId)||{};
+  const pg=progress(empSt.checks);
+  const lines=[
+    'ONBOARDING AUDIT LOG','═'.repeat(40),
+    `Employee:  ${e.name||'—'}`,`Company:   ${e.company||'—'}`,
+    `Position:  ${e.position||'—'}`,`Start:     ${e.start?fmtD(e.start):'—'}`,
+    `Status:    ${e.status==='finalized'?'FINALIZED by '+e.finalizedBy+' on '+fmtDT(e.finalizedAt):'Active'}`,
+    `Progress:  ${pg.done}/${pg.total} (${pg.pct}%)`,
+    `Exported:  ${new Date().toLocaleString()}`,
+    '','ACTIVITY LOG','═'.repeat(40),
+    ...(empSt.auditLog||[]).map(x=>`${fmtDT(x.when)} | ${x.who||'Unknown'} | ${(x.action||'').toUpperCase()} | ${x.label}`)
+  ];
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([lines.join('\n')],{type:'text/plain'}));
+  a.download=`onboarding-${(e.name||'unknown').replace(/\s+/g,'-')}-${new Date().toISOString().slice(0,10)}.txt`;
+  a.click();
+}
+
+// ═══════════════════════════════════════════════
+// USER
+// ═══════════════════════════════════════════════
+async function saveUserName(){
+  currentUser=document.getElementById('currentUser').value.trim();
+}
+
+// ═══════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════
+(async()=>{
+  buildEquipmentList([]);
+  await initAuth();
+  if(msalAccount){
+    await loadApp();
+  } else {
+    showLoginScreen();
+  }
+})();
+</script>
+</body>
+</html>
