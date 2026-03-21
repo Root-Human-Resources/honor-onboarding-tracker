@@ -692,7 +692,7 @@ function loadScript(src){
 async function initAuth(){
   await loadScript('https://alcdn.msauth.net/browser/2.38.3/js/msal-browser.min.js');
   msalInstance=new msal.PublicClientApplication({
-    auth:{clientId:GRAPH_CONFIG.clientId,authority:GRAPH_CONFIG.authority,redirectUri:'https://lively-hill-0ad745610.1.azurestaticapps.net'},
+    auth:{clientId:GRAPH_CONFIG.clientId,authority:GRAPH_CONFIG.authority,redirectUri:'https://root-human-resources.github.io/honor-onboarding-tracker/'},
     cache:{cacheLocation:'localStorage',storeAuthStateInCookie:true}
   });
   await msalInstance.initialize();
