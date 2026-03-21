@@ -664,127 +664,170 @@ let rosterTab='active', saveTO=null, clSaveTO=null, deleteId=null, progCache={};
 let prevView='roster'; // for back button
 
 // ═══════════════════════════════════════════════
-// MICROSOFT GRAPH CONFIG
+// SHAREPOINT REST API CONFIG
 // ═══════════════════════════════════════════════
-const GRAPH_CONFIG = {
-  clientId: '3695598c-3996-4a83-8184-0c443fe253ff',
-  authority: 'https://login.microsoftonline.com/common',
-  scopes: ['Files.ReadWrite.All', 'User.Read'],
-  driveBase: 'https://graph.microsoft.com/v1.0/sites/brownind.sharepoint.com:/sites/Root-HR:/drive',
-  folder: '1. Onboarding',
-  rosterFile: 'ob-roster.json',
-  clFile: 'ob-checklists.json'
+const SP_CONFIG = {
+  siteUrl: 'https://brownind.sharepoint.com/sites/Root-HR',
+  rosterList: 'OB_Roster',
+  checklistList: 'OB_Checklist'
 };
 
-let msalInstance=null, msalAccount=null;
-
 // ═══════════════════════════════════════════════
-// MSAL AUTH
+// SHAREPOINT REST HELPERS
 // ═══════════════════════════════════════════════
-function loadScript(src){
-  return new Promise((res,rej)=>{
-    if(document.querySelector(`script[src="${src}"]`)){res();return;}
-    const s=document.createElement('script');s.src=src;s.onload=res;s.onerror=rej;
-    document.head.appendChild(s);
+async function getFormDigest(){
+  const resp = await fetch(`${SP_CONFIG.siteUrl}/_api/contextinfo`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: {'Accept':'application/json;odata=nometadata','Content-Type':'application/json'}
   });
+  const data = await resp.json();
+  return data.FormDigestValue;
 }
 
-async function initAuth(){
-  await loadScript('https://cdn.jsdelivr.net/npm/@azure/msal-browser@2.38.3/lib/msal-browser.min.js');
-  msalInstance=new msal.PublicClientApplication({
-    auth:{clientId:GRAPH_CONFIG.clientId,authority:GRAPH_CONFIG.authority,redirectUri:'https://root-human-resources.github.io/honor-onboarding-tracker/'},
-    cache:{cacheLocation:'localStorage',storeAuthStateInCookie:true}
+async function spGet(url){
+  const resp = await fetch(url, {
+    credentials: 'include',
+    headers: {'Accept':'application/json;odata=nometadata'}
   });
-  await msalInstance.initialize();
-  try{await msalInstance.handleRedirectPromise();}catch(e){}
-  const accounts=msalInstance.getAllAccounts();
-  if(accounts.length>0) msalAccount=accounts[0];
+  if(!resp.ok) throw new Error('SP GET '+resp.status);
+  return resp.json();
 }
 
-async function getToken(){
-  try{
-    if(msalAccount){
-      const r=await msalInstance.acquireTokenSilent({scopes:GRAPH_CONFIG.scopes,account:msalAccount});
-      msalAccount=r.account; return r.accessToken;
-    }
-  }catch(e){}
-  // Fall back to redirect
-  await msalInstance.acquireTokenRedirect({scopes:GRAPH_CONFIG.scopes});
+async function spPost(url, body){
+  const digest = await getFormDigest();
+  const resp = await fetch(url, {
+    method: 'POST',
+    credentials: 'include',
+    headers: {
+      'Accept':'application/json;odata=nometadata',
+      'Content-Type':'application/json;odata=nometadata',
+      'X-RequestDigest': digest
+    },
+    body: JSON.stringify(body)
+  });
+  if(!resp.ok) throw new Error('SP POST '+resp.status);
+  if(resp.status===204) return null;
+  return resp.json();
+}
+
+async function spPatch(url, body){
+  const digest = await getFormDigest();
+  const resp = await fetch(url, {
+    method: 'POST',
+    credentials: 'include',
+    headers: {
+      'Accept':'application/json;odata=nometadata',
+      'Content-Type':'application/json;odata=nometadata',
+      'X-RequestDigest': digest,
+      'X-HTTP-Method': 'MERGE',
+      'IF-MATCH': '*'
+    },
+    body: JSON.stringify(body)
+  });
+  if(!resp.ok) throw new Error('SP PATCH '+resp.status);
   return null;
 }
 
-async function signIn(){
-  try{
-    await msalInstance.loginRedirect({scopes:GRAPH_CONFIG.scopes});
-    return true;
-  }catch(e){console.error('Login error',e);return false;}
-}
-
-// ═══════════════════════════════════════════════
-// GRAPH FILE I/O
-// ═══════════════════════════════════════════════
-function fileUrl(name){
-  return `${GRAPH_CONFIG.driveBase}/root:/${GRAPH_CONFIG.folder}/${name}:/content`;
-}
-
-async function readJsonFile(name){
-  try{
-    const token=await getToken();
-    const resp=await fetch(fileUrl(name),{headers:{Authorization:'Bearer '+token}});
-    if(resp.status===404) return null;
-    if(!resp.ok) throw new Error(resp.status);
-    return await resp.json();
-  }catch(e){return null;}
-}
-
-async function writeJsonFile(name,data){
-  const token=await getToken();
-  const resp=await fetch(fileUrl(name),{
-    method:'PUT',
-    headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},
-    body:JSON.stringify(data)
+async function spDelete(url){
+  const digest = await getFormDigest();
+  await fetch(url, {
+    method: 'POST',
+    credentials: 'include',
+    headers: {
+      'X-RequestDigest': digest,
+      'X-HTTP-Method': 'DELETE',
+      'IF-MATCH': '*'
+    }
   });
-  if(!resp.ok) throw new Error('Write failed: '+resp.status);
 }
 
 // ═══════════════════════════════════════════════
-// STORAGE — Microsoft Graph / SharePoint
+// STORAGE — SharePoint REST API
 // ═══════════════════════════════════════════════
 async function loadRoster(){
-  setStatus('Loading roster…');
-  roster=(await readJsonFile(GRAPH_CONFIG.rosterFile))||[];
-  setStatus('');
+  try{
+    setStatus('Loading roster…');
+    const resp = await spGet(`${SP_CONFIG.siteUrl}/_api/web/lists/getbytitle('${SP_CONFIG.rosterList}')/items?$select=Id,Title,EmployeeData&$top=500&$orderby=Created desc`);
+    roster = (resp.value||[]).map(item=>{
+      try{ const d=JSON.parse(item.EmployeeData||'{}'); return {...d,_spId:item.Id,name:item.Title}; }
+      catch(e){ return {_spId:item.Id,name:item.Title||'Unknown',status:'active'}; }
+    });
+    setStatus('');
+  }catch(e){
+    console.error('loadRoster error:',e);
+    roster=[];
+    setStatus('');
+    showToast('Could not load roster — are you logged into SharePoint?','#991b1b');
+  }
 }
 
 async function saveRoster(){
-  await writeJsonFile(GRAPH_CONFIG.rosterFile,roster).catch(e=>showToast('Save failed: '+e.message,'#991b1b'));
+  // Each employee saved individually — called by saveEmployee
+}
+
+async function saveEmployee(emp){
+  const payload = {Title: emp.name||'Unknown', EmployeeData: JSON.stringify(emp)};
+  try{
+    if(emp._spId){
+      await spPatch(`${SP_CONFIG.siteUrl}/_api/web/lists/getbytitle('${SP_CONFIG.rosterList}')/items(${emp._spId})`, payload);
+    } else {
+      const resp = await spPost(`${SP_CONFIG.siteUrl}/_api/web/lists/getbytitle('${SP_CONFIG.rosterList}')/items`, payload);
+      emp._spId = resp.Id;
+      const idx = roster.findIndex(e=>e.id===emp.id);
+      if(idx>=0) roster[idx]._spId = resp.Id;
+    }
+  }catch(e){ showToast('Save failed: '+e.message,'#991b1b'); }
+}
+
+async function deleteEmployee(id){
+  const e=roster.find(x=>x.id===id);
+  if(e?._spId){
+    try{ await spDelete(`${SP_CONFIG.siteUrl}/_api/web/lists/getbytitle('${SP_CONFIG.rosterList}')/items(${e._spId})`); }catch(err){}
+  }
+  roster=roster.filter(x=>x.id!==id);
+  // Delete checklist data
+  try{
+    const cl = await spGet(`${SP_CONFIG.siteUrl}/_api/web/lists/getbytitle('${SP_CONFIG.checklistList}')/items?$filter=EmployeeId eq '${id}'&$select=Id`);
+    for(const item of cl.value||[]){
+      await spDelete(`${SP_CONFIG.siteUrl}/_api/web/lists/getbytitle('${SP_CONFIG.checklistList}')/items(${item.Id})`).catch(()=>{});
+    }
+  }catch(e){}
 }
 
 async function loadEmp(id){
-  const all=(await readJsonFile(GRAPH_CONFIG.clFile))||{};
-  return all[id]||{checks:{},auditLog:[],collapsed:{}};
+  try{
+    const resp = await spGet(`${SP_CONFIG.siteUrl}/_api/web/lists/getbytitle('${SP_CONFIG.checklistList}')/items?$filter=EmployeeId eq '${id}'&$select=Id,ChecklistData&$top=1`);
+    const item = (resp.value||[])[0];
+    if(item){
+      const data = JSON.parse(item.ChecklistData||'{}');
+      data._spId = item.Id;
+      return data;
+    }
+  }catch(e){ console.error('loadEmp',e); }
+  return {checks:{},auditLog:[],collapsed:{}};
 }
 
 async function persistEmp(){
-  if(!currentId||!empSt)return;
+  if(!currentId||!empSt) return;
   try{
-    const all=(await readJsonFile(GRAPH_CONFIG.clFile))||{};
-    all[currentId]=empSt;
-    await writeJsonFile(GRAPH_CONFIG.clFile,all);
-  }catch(e){showToast('Checklist save failed: '+e.message,'#991b1b');}
-}
-
-async function saveEmployee(emp){await saveRoster();}
-
-async function deleteEmployee(id){
-  roster=roster.filter(x=>x.id!==id);
-  await saveRoster();
-  try{const all=(await readJsonFile(GRAPH_CONFIG.clFile))||{};delete all[id];await writeJsonFile(GRAPH_CONFIG.clFile,all);}catch(e){}
+    const payload = {EmployeeId: currentId, ChecklistData: JSON.stringify(empSt)};
+    if(empSt._spId){
+      await spPatch(`${SP_CONFIG.siteUrl}/_api/web/lists/getbytitle('${SP_CONFIG.checklistList}')/items(${empSt._spId})`, payload);
+    } else {
+      const resp = await spPost(`${SP_CONFIG.siteUrl}/_api/web/lists/getbytitle('${SP_CONFIG.checklistList}')/items`, payload);
+      empSt._spId = resp.Id;
+    }
+  }catch(e){ showToast('Checklist save failed: '+e.message,'#991b1b'); }
 }
 
 async function loadAllProgress(){
-  const all=(await readJsonFile(GRAPH_CONFIG.clFile))||{};
-  for(const id in all){progCache[id]=all[id].checks||{};}
+  try{
+    const resp = await spGet(`${SP_CONFIG.siteUrl}/_api/web/lists/getbytitle('${SP_CONFIG.checklistList}')/items?$select=EmployeeId,ChecklistData&$top=500`);
+    for(const item of resp.value||[]){
+      try{ const data=JSON.parse(item.ChecklistData||'{}'); progCache[item.EmployeeId]=data.checks||{}; }catch(e){}
+    }
+  }catch(e){ console.error('loadAllProgress',e); }
 }
 
 // ═══════════════════════════════════════════════
@@ -794,45 +837,6 @@ function setStatus(msg){
   let el=document.getElementById('statusBar');
   if(!el){el=document.createElement('div');el.id='statusBar';el.style.cssText='position:fixed;top:54px;left:0;right:0;background:#333F50;color:#a0b4c8;font-family:var(--mono);font-size:11px;padding:7px 28px;z-index:190;text-align:center;';document.body.appendChild(el);}
   el.textContent=msg;el.style.display=msg?'block':'none';
-}
-
-// ═══════════════════════════════════════════════
-// LOGIN SCREEN
-// ═══════════════════════════════════════════════
-function showLoginScreen(){
-  const d=document.createElement('div');d.id='loginScreen';
-  d.style.cssText='display:flex;align-items:center;justify-content:center;min-height:calc(100vh - 54px);';
-  d.innerHTML=`<div style="background:white;border:1px solid var(--border);border-radius:8px;padding:44px 52px;text-align:center;max-width:420px;box-shadow:0 4px 24px rgba(0,0,0,.08);">
-    <div style="font-size:36px;margin-bottom:16px;">🔐</div>
-    <h2 style="font-size:18px;font-weight:700;margin-bottom:8px;color:var(--dark);">Sign in to continue</h2>
-    <p style="font-size:13px;color:var(--muted);margin-bottom:28px;line-height:1.65;">Use your Brown Industries Microsoft account to access the Onboarding Tracker. Your changes will sync automatically for all team members.</p>
-    <button onclick="handleSignIn()" class="btn btn-primary" style="width:100%;justify-content:center;font-size:14px;padding:11px;">Sign in with Microsoft</button>
-  </div>`;
-  document.body.appendChild(d);
-}
-
-async function handleSignIn(){
-  const btn=document.querySelector('#loginScreen .btn-primary');
-  btn.textContent='Redirecting to Microsoft…';btn.disabled=true;
-  await signIn();
-  // Page will redirect to Microsoft — nothing more to do here
-}
-
-async function loadApp(){
-  // Get user's name from Microsoft profile
-  try{
-    const token=await getToken();
-    const me=await(await fetch('https://graph.microsoft.com/v1.0/me',{headers:{Authorization:'Bearer '+token}})).json();
-    currentUser=me.displayName||me.userPrincipalName||'';
-    document.getElementById('currentUser').value=currentUser;
-  }catch(e){}
-  setStatus('Loading data…');
-  await loadRoster();
-  await loadAllProgress();
-  setStatus('');
-  buildEquipmentList([]);
-  document.getElementById('viewRoster').classList.add('active');
-  renderRoster();
 }
 
 // ═══════════════════════════════════════════════
@@ -1442,6 +1446,21 @@ function exportAudit(){
 // ═══════════════════════════════════════════════
 async function saveUserName(){
   currentUser=document.getElementById('currentUser').value.trim();
+  try{localStorage.setItem('ob_user',currentUser);}catch(e){}
+}
+
+async function loadCurrentUser(){
+  // Try to get name from SharePoint current user
+  try{
+    const resp = await spGet(`${SP_CONFIG.siteUrl}/_api/web/currentuser?$select=Title`);
+    if(resp?.Title){
+      currentUser=resp.Title;
+      document.getElementById('currentUser').value=currentUser;
+      return;
+    }
+  }catch(e){}
+  // Fall back to localStorage
+  try{const u=localStorage.getItem('ob_user');if(u){currentUser=u;document.getElementById('currentUser').value=u;}}catch(e){}
 }
 
 // ═══════════════════════════════════════════════
@@ -1449,11 +1468,20 @@ async function saveUserName(){
 // ═══════════════════════════════════════════════
 (async()=>{
   buildEquipmentList([]);
-  await initAuth();
-  if(msalAccount){
-    await loadApp();
-  } else {
-    showLoginScreen();
+  setStatus('Loading…');
+  try{
+    await loadCurrentUser();
+    await loadRoster();
+    await loadAllProgress();
+    setStatus('');
+    document.getElementById('viewRoster').classList.add('active');
+    renderRoster();
+  }catch(e){
+    setStatus('');
+    showToast('Error loading data — make sure you are logged into SharePoint','#991b1b');
+    // Still show roster even if data fails
+    document.getElementById('viewRoster').classList.add('active');
+    renderRoster();
   }
 })();
 </script>
