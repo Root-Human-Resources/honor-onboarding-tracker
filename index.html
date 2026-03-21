@@ -703,21 +703,21 @@ async function initAuth(){
 
 async function getToken(){
   try{
-    const r=msalAccount
-      ?await msalInstance.acquireTokenSilent({scopes:GRAPH_CONFIG.scopes,account:msalAccount})
-      :await msalInstance.acquireTokenPopup({scopes:GRAPH_CONFIG.scopes});
-    msalAccount=r.account; return r.accessToken;
-  }catch(e){
-    const r=await msalInstance.acquireTokenPopup({scopes:GRAPH_CONFIG.scopes});
-    msalAccount=r.account; return r.accessToken;
-  }
+    if(msalAccount){
+      const r=await msalInstance.acquireTokenSilent({scopes:GRAPH_CONFIG.scopes,account:msalAccount});
+      msalAccount=r.account; return r.accessToken;
+    }
+  }catch(e){}
+  // Fall back to redirect
+  await msalInstance.acquireTokenRedirect({scopes:GRAPH_CONFIG.scopes});
+  return null;
 }
 
 async function signIn(){
   try{
-    const r=await msalInstance.loginPopup({scopes:GRAPH_CONFIG.scopes});
-    msalAccount=r.account; return true;
-  }catch(e){return false;}
+    await msalInstance.loginRedirect({scopes:GRAPH_CONFIG.scopes});
+    return true;
+  }catch(e){console.error('Login error',e);return false;}
 }
 
 // ═══════════════════════════════════════════════
@@ -813,15 +813,9 @@ function showLoginScreen(){
 
 async function handleSignIn(){
   const btn=document.querySelector('#loginScreen .btn-primary');
-  btn.textContent='Signing in…';btn.disabled=true;
-  const ok=await signIn();
-  if(ok){
-    document.getElementById('loginScreen')?.remove();
-    await loadApp();
-  }else{
-    btn.textContent='Sign in with Microsoft';btn.disabled=false;
-    showToast('Sign in failed — please try again','#991b1b');
-  }
+  btn.textContent='Redirecting to Microsoft…';btn.disabled=true;
+  await signIn();
+  // Page will redirect to Microsoft — nothing more to do here
 }
 
 async function loadApp(){
