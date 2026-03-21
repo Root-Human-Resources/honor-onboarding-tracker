@@ -163,6 +163,13 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 .cl-item.sub{padding-left:42px;}
 .cl-item.readonly{cursor:default;}
 .cl-item.readonly:hover{background:var(--done-light);}
+.cl-item.na-item{background:#f5f5f5;}
+.cl-item.na-item:hover{background:#ebebeb;}
+.cl-item.na-item .cl-item-lbl{color:#9aabb8;text-decoration:line-through;text-decoration-color:#c5cad4;}
+.cl-na-btn{font-family:var(--mono);font-size:9px;font-weight:700;padding:2px 6px;border-radius:3px;border:1.5px solid var(--border);background:white;color:var(--muted);cursor:pointer;margin-left:6px;white-space:nowrap;transition:all .14s;}
+.cl-na-btn:hover{background:#f0f0f0;}
+.cl-item.na-item .cl-na-btn{background:#e0e0e0;border-color:#bbb;color:#666;}
+.cl-na-cb{width:17px;height:17px;border:2px solid #c5cad4;border-radius:3px;flex-shrink:0;margin-top:2px;display:flex;align-items:center;justify-content:center;background:#e8e8e8;}
 .cl-cb{width:17px;height:17px;border:2px solid var(--border);border-radius:3px;flex-shrink:0;margin-top:2px;display:flex;align-items:center;justify-content:center;background:white;transition:all .14s;}
 .cl-item.checked .cl-cb{background:var(--done);border-color:var(--done);}
 .cl-ck{display:none;color:white;font-size:10px;font-weight:700;}
@@ -306,6 +313,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
             <label>Position Type *</label>
             <select id="fPosType" onchange="handlePosTypeChange(); schedSave();">
               <option value="">— Select —</option>
+              <option value="N/A">N/A</option>
               <option value="Craft">Craft</option>
               <option value="Field Supervision">Field Supervision</option>
               <option value="Professional">Professional</option>
@@ -331,6 +339,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
             <label>Pay Type</label>
             <select id="fPayType" onchange="schedSave()">
               <option value="">— Select —</option>
+              <option value="N/A">N/A</option>
               <option>Hourly</option>
               <option>Salary</option>
             </select>
@@ -399,6 +408,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
             <label>Gloves</label>
             <select id="ppeGloves" onchange="schedSave()">
               <option value="">— Select —</option>
+              <option value="N/A">N/A</option>
               <option>Small</option><option>Medium</option><option>Large</option><option>XL</option>
             </select>
           </div>
@@ -406,6 +416,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
             <label>Shirt</label>
             <select id="ppeShirt" onchange="schedSave()">
               <option value="">— Select —</option>
+              <option value="N/A">N/A</option>
               <option>Small</option><option>Medium</option><option>Large</option><option>XL</option>
               <option>2XL</option><option>3XL</option><option>4XL</option><option>5XL</option>
             </select>
@@ -414,6 +425,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
             <label>Vest</label>
             <select id="ppeVest" onchange="schedSave()">
               <option value="">— Select —</option>
+              <option value="N/A">N/A</option>
               <option>Small</option><option>Medium</option><option>Large</option><option>XL</option>
               <option>2XL</option><option>3XL</option><option>4XL</option><option>5XL</option>
             </select>
@@ -422,6 +434,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
             <label>FRC</label>
             <select id="ppeFRC" onchange="schedSave()">
               <option value="">— Select —</option>
+              <option value="N/A">N/A</option>
               <option>Small</option><option>Medium</option><option>Large</option><option>XL</option>
               <option>2XL</option><option>3XL</option><option>4XL</option><option>5XL</option>
             </select>
@@ -782,7 +795,8 @@ async function saveEmployee(emp){
 
 async function deleteEmployee(id){
   roster=roster.filter(x=>x.id!==id);
-  // Note: row stays in sheet but filtered out by empty id check
+  try{ await gsCall({action:'deleteEmployee', employeeId:id}); }
+  catch(e){ console.error('deleteEmployee error:',e); }
 }
 
 async function loadEmp(id){
@@ -835,7 +849,13 @@ function setStatus(msg){
 // ═══════════════════════════════════════════════
 // UTILS
 // ═══════════════════════════════════════════════
-function progress(checks){const done=Object.values(checks).filter(c=>c.checked).length;return{done,total:TOTAL,pct:Math.round(done/TOTAL*100)};}
+function progress(checks){
+  const vals=Object.values(checks);
+  const done=vals.filter(c=>c.checked).length;
+  const na=vals.filter(c=>c.na).length;
+  const total=TOTAL-na;
+  return{done,total,na,pct:total>0?Math.round(done/total*100):0};
+}
 function todayISO(){return new Date().toISOString().slice(0,10);}
 function fmtD(d){if(!d)return'—';try{const[y,m,day]=d.split('-');return new Date(+y,+m-1,+day).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'});}catch(e){return d;}}
 function fmtDT(iso){if(!iso)return'';try{return new Date(iso).toLocaleString(undefined,{month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit'});}catch(e){return iso;}}
@@ -1087,7 +1107,7 @@ function schedSave(){
   setSaveStatus('saving');
   saveTO=setTimeout(async()=>{
     const e=roster.find(x=>x.id===currentId);
-    if(e){ Object.assign(e, collectForm()); await saveRoster(); }
+    if(e){ Object.assign(e, collectForm()); await saveEmployee(e); }
     setSaveStatus('saved');
   }, 1200);
 }
@@ -1097,18 +1117,21 @@ async function saveForm(silent=false){
   if(!data.name){showToast('Employee name is required.','#c8440a');return;}
   if(!data.company){showToast('Hiring company is required.','#c8440a');return;}
   setSaveStatus('saving');
+  let emp;
   if(currentId){
-    Object.assign(roster.find(x=>x.id===currentId), data);
+    emp = roster.find(x=>x.id===currentId);
+    Object.assign(emp, data);
   } else {
     const id='e'+Date.now();
     currentId=id;
     empSt={checks:{},auditLog:[],collapsed:{}};
-    roster.push({...data, id, status:'active', createdAt:new Date().toISOString()});
+    emp = {...data, id, status:'active', createdAt:new Date().toISOString()};
+    roster.push(emp);
     progCache[id]={};
     document.getElementById('btnOpenChecklist').style.display='inline-flex';
     document.getElementById('btnNotify').style.display='inline-flex';
   }
-  await saveRoster();
+  await saveEmployee(emp);
   await persistEmp();
   progCache[currentId]=empSt.checks;
   setSaveStatus('saved');
@@ -1151,13 +1174,16 @@ function renderChecklist(fin){
     const col=empSt.collapsed[sec.id];
     const tot=sec.items.length;
     const dn=sec.items.filter(it=>empSt.checks[it.id]?.checked).length;
+    const naCount=sec.items.filter(it=>empSt.checks[it.id]?.na).length;
     const div=document.createElement('div');
     div.className='cl-section'+(col?' collapsed':'');
     div.innerHTML=`
       <div class="cl-sec-hdr" onclick="toggleSec('${sec.id}')">
         <h3>${sec.title}</h3>
         <div class="cl-sec-meta">
-          <span class="cl-sec-count${dn===tot?' done':''}">${dn}/${tot}</span>
+          <span class="cl-sec-count${dn===(tot-naCount)&&(tot-naCount)>0?' done':''}">
+            ${dn}/${tot-naCount}${naCount>0?` <span style="color:#9aabb8;font-weight:400">(${naCount} N/A)</span>`:''}
+          </span>
           <span class="chevron">▼</span>
         </div>
       </div>
@@ -1167,12 +1193,20 @@ function renderChecklist(fin){
           const checked=!!ck.checked;
           const cls=`cl-item${checked?' checked':''}${it.s?' sub':''}${fin?' readonly':''}`;
           const click=fin?'':` onclick="toggleItem('${it.id}')"`;
-          return`<div class="${cls}"${click}>
-            <div class="cl-cb"><span class="cl-ck">✓</span></div>
-            <div>
+          const isNA=!!ck.na;
+          const itemCls=`cl-item${checked?' checked':''}${isNA?' na-item':''}${it.s?' sub':''}${fin?' readonly':''}`;
+          const itemClick=fin?'':(checked||isNA)?'':`onclick="toggleItem('${it.id}')"`;
+          return`<div class="${itemCls}" ${itemClick} style="cursor:${fin?'default':'pointer'}">
+            ${isNA
+              ?`<div class="cl-na-cb"><span style="font-size:9px;font-weight:700;color:#999;">N/A</span></div>`
+              :`<div class="cl-cb"><span class="cl-ck">✓</span></div>`
+            }
+            <div style="flex:1">
               <div class="cl-item-lbl">${esc(it.l)}</div>
               ${checked?`<div class="cl-item-who">✓ ${esc(ck.who||'Unknown')} — ${fmtDT(ck.when)}</div>`:''}
+              ${isNA?`<div class="cl-item-who">N/A — ${esc(ck.naWho||'Unknown')} — ${fmtDT(ck.naWhen)}</div>`:''}
             </div>
+            ${!fin?`<button class="cl-na-btn" onclick="event.stopPropagation();toggleNA('${it.id}')">${isNA?'Undo N/A':'N/A'}</button>`:''}
           </div>`;
         }).join('')}
       </div>`;
@@ -1190,12 +1224,31 @@ function toggleSec(id){
 }
 
 function toggleItem(id){
-  if(!currentUser){alert('Please enter your name at the top right before checking items.');document.getElementById('currentUser').focus();return;}
+  if(!currentUser){showWelcome();return;}
   const was=!!empSt.checks[id]?.checked;
   const now=new Date().toISOString();
   const lbl=SECTIONS.flatMap(s=>s.items).find(it=>it.id===id)?.l||id;
   empSt.checks[id]={checked:!was,who:currentUser,when:now};
   empSt.auditLog.push({itemId:id,label:lbl,who:currentUser,when:now,action:was?'unchecked':'checked'});
+  schedClSave();
+  const e=roster.find(x=>x.id===currentId);
+  renderChecklist(e?.status==='finalized');
+}
+
+function toggleNA(id){
+  if(!currentUser){showWelcome();return;}
+  const was=!!empSt.checks[id]?.na;
+  const now=new Date().toISOString();
+  const lbl=SECTIONS.flatMap(s=>s.items).find(it=>it.id===id)?.l||id;
+  if(was){
+    // Undo N/A
+    empSt.checks[id]={checked:false};
+    empSt.auditLog.push({itemId:id,label:lbl,who:currentUser,when:now,action:'removed N/A'});
+  } else {
+    // Mark N/A — clear any check first
+    empSt.checks[id]={checked:false,na:true,naWho:currentUser,naWhen:now};
+    empSt.auditLog.push({itemId:id,label:lbl,who:currentUser,when:now,action:'marked N/A'});
+  }
   schedClSave();
   const e=roster.find(x=>x.id===currentId);
   renderChecklist(e?.status==='finalized');
@@ -1222,7 +1275,7 @@ function updateClProgress(){
 function renderAuditLog(){
   const log=[...(empSt.auditLog||[])].reverse().slice(0,60);
   document.getElementById('auditLog').innerHTML=log.length
-    ?log.map(x=>`<div class="audit-entry"><span class="aw">${esc(x.who||'Unknown')}</span><span class="${x.action==='checked'?'ac':'au'}"> ${x.action==='checked'?'✓ checked':'○ unchecked'}</span> — ${esc(x.label)}<br><span style="color:#bbb">${fmtDT(x.when)}</span></div>`).join('')
+    ?log.map(x=>`<div class="audit-entry"><span class="aw">${esc(x.who||'Unknown')}</span><span class="${x.action==='checked'?'ac':'au'}"> ${x.action==='checked'?'✓ checked':x.action==='marked N/A'?'— N/A':x.action==='removed N/A'?'↩ N/A removed':'○ unchecked'}</span> — ${esc(x.label)}<br><span style="color:#bbb">${fmtDT(x.when)}</span></div>`).join('')
     :'<div class="audit-entry empty">No activity yet.</div>';
 }
 
@@ -1365,7 +1418,7 @@ async function sendNotifications(){
   const now=new Date().toISOString();
   empSt.auditLog.push({itemId:'SYSTEM',label:`Notifications sent — ${sent} emails`,who:currentUser||'Unknown',when:now,action:'notified'});
   e.notified=true; e.notifiedAt=now; e.notifiedBy=currentUser||'Unknown';
-  await saveRoster(); await persistEmp();
+  await saveEmployee(e); await persistEmp();
   btn.disabled=false; btn.textContent=errs?`Done (${errs} error${errs>1?'s':''})`:'✓ All Sent';
   if(!errs)showToast(`${sent} notification${sent!==1?'s':''} sent ✓`);
   else showToast(`${sent} sent, ${errs} failed`,'#c8440a');
