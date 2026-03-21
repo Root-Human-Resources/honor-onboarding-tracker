@@ -582,10 +582,7 @@ const NOTIFY_CONFIG = {
   secretKey: 'Honor1420!'
 };
 const RECIPIENTS={
-  guardian: 'guardian@yourcompany.com',
-  kacie:    'kacie@yourcompany.com',
-  it:       'it@yourcompany.com',
-  assets:   'assets@yourcompany.com',
+  test: 'gabe.watts@brown-ind.com'
 };
 
 // ═══════════════════════════════════════════════
@@ -1283,65 +1280,37 @@ function renderAuditLog(){
 // NOTIFICATIONS
 // ═══════════════════════════════════════════════
 function buildNotifGroups(e){
-  const assets=e.assets||[];
-  const hasAsset=v=>assets.some(a=>a===v);
-  const itAssets=assets.filter(a=>['Laptop','iPad','Office Space'].includes(a));
-  const needsAssets=hasAsset('Company Truck')||hasAsset('Fuel Card');
-  const isCraftOrField=e.posType==='Craft'||e.posType==='Field Supervision';
+  const pt = e.posType||'';
+  const isCraft = pt==='Craft';
+  const isField = pt==='Field Supervision';
+  const craftOrField = isCraft||isField;
 
-  return[
-    {
-      id:'guardian', name:'Guardian', to:RECIPIENTS.guardian,
-      subject:`New Hire — PPE & Site Access: ${e.name} | ${e.company}`,
-      skip: !isCraftOrField,
-      skipReason:'Not a Craft or Field Supervision employee — Guardian notification not needed.',
-      fields:[
-        ['Name',e.name],['Company',e.company],['Position Type',e.posType],['Job Title',e.position],
-        ['Expected Start Date',e.start?fmtD(e.start):null],
-        ['Expected Jobsite',e.jobsite],
-        ['PPE Sizes',buildPPE(e)],
-        ['Equipment List',(e.equipment||[]).join(', ')||null],
-      ],
-    },
-    {
-      id:'kacie', name:'Kacie', to:RECIPIENTS.kacie,
-      subject:`New Hire — Assets Ready: ${e.name} | ${e.company}`,
-      skip:false,
-      fields:[
-        ['Name',e.name],['Company',e.company],['Position Type',e.posType],['Job Title',e.position],
-        ['Expected Start Date',e.start?fmtD(e.start):null],
-        ['All Assets Needed',assets.length?assets.join(', '):null],
-        ['Comments',e.comments||null],
-      ],
-    },
-    {
-      id:'it', name:'IT', to:RECIPIENTS.it,
-      subject:`New Hire — IT Setup: ${e.name} | ${e.company}`,
-      skip:itAssets.length===0,
-      skipReason:'No IT assets (Laptop, iPad, Office Space) selected — IT notification not needed.',
-      fields:[
-        ['Name',e.name],['Company',e.company],['Position Type',e.posType],['Job Title',e.position],
-        ['Expected Start Date',e.start?fmtD(e.start):null],
-        ['IT Assets Needed',itAssets.join(', ')||null],
-      ],
-    },
-    {
-      id:'assets', name:'Asset Management', to:RECIPIENTS.assets,
-      subject:`New Hire — Company Truck/Fuel Card: ${e.name} | ${e.company}`,
-      skip:!needsAssets,
-      skipReason:'Company Truck and Fuel Card not selected — Asset Management not notified.',
-      fields:[
-        ['Name',e.name],['Company',e.company],['Position Type',e.posType],['Job Title',e.position],
-        ['Expected Start Date',e.start?fmtD(e.start):null],
-        ['Assets',assets.filter(a=>['Company Truck','Fuel Card'].includes(a)).join(', ')||null],
-      ],
-    },
-  ];
+  const ppe = buildPPE(e);
+  const equip = (e.equipment||[]).join(', ')||'—';
+
+  return [{
+    id:'test', name:'Test Notification', to: RECIPIENTS.test,
+    subject:`New Hire Onboarding — ${e.name||'Unknown'} | ${e.company||''}`,
+    skip: false,
+    fields:[
+      {label:'Name',        value: e.name||'—'},
+      {label:'Company',     value: e.company||'—'},
+      {label:'Position Type', value: e.posType||'—'},
+      {label:'Job Title',   value: e.position||'—'},
+      {label:'PPE Sizes',   value: ppe||'—'},
+      {label:'Equipment',   value: equip}
+    ]
+  }];
 }
+
 
 function buildEmailBody(g){
   const lines=[`ONBOARDING NOTIFICATION — ${g.name.toUpperCase()}`,'─'.repeat(44),''];
-  g.fields.forEach(([l,v])=>{if(v)lines.push(`${l.padEnd(22)}: ${v}`);});
+  (g.fields||[]).forEach(f=>{
+    const label = typeof f === 'object' ? f.label : f[0];
+    const value = typeof f === 'object' ? f.value : f[1];
+    if(value) lines.push(`${label.padEnd(22)}: ${value}`);
+  });
   lines.push('','─'.repeat(44),`Sent ${new Date().toLocaleString()}`);
   return lines.join('\n');
 }
