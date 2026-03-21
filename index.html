@@ -664,62 +664,59 @@ let rosterTab='active', saveTO=null, clSaveTO=null, deleteId=null, progCache={};
 let prevView='roster'; // for back button
 
 // ═══════════════════════════════════════════════
-// POWER AUTOMATE CONFIG
+// GOOGLE SHEETS CONFIG
 // ═══════════════════════════════════════════════
-const PA_CONFIG = {
+const GS_CONFIG = {
   secretKey: 'Honor1420!',
-  saveEmployeeUrl: 'https://default8bda83c3f559480fbae42af4aadca9.4b.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/acd9ecb1d76743329f5788e76f1c8924/triggers/manual/paths/invoke?api-version=1',
-  loadRosterUrl:   'https://default8bda83c3f559480fbae42af4aadca9.4b.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/6a2ab0268fc2483abcbb52276e5af5cd/triggers/manual/paths/invoke?api-version=1',
-  saveChecklistUrl:'https://default8bda83c3f559480fbae42af4aadca9.4b.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/fb8ae351944848ed879d8a8ea34253d1/triggers/manual/paths/invoke?api-version=1'
+  apiUrl: 'https://script.google.com/macros/s/AKfycbx2W5C_DYvLki1pNqaYeqwOw9vYYzi8WWqpTGetme8gi3WtnraCkZ8aGsOnb5hyh7kJ/exec'
 };
 
 // ═══════════════════════════════════════════════
-// POWER AUTOMATE HELPERS
+// GOOGLE SHEETS API HELPER
 // ═══════════════════════════════════════════════
-async function paCall(url, body){
-  const resp = await fetch(url, {
+async function gsCall(body){
+  const resp = await fetch(GS_CONFIG.apiUrl, {
     method: 'POST',
-    headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({...body, secretKey: PA_CONFIG.secretKey})
+    body: JSON.stringify({...body, secretKey: GS_CONFIG.secretKey})
   });
-  if(!resp.ok) throw new Error('Flow error: '+resp.status);
-  try{ return await resp.json(); }catch(e){ return null; }
+  if(!resp.ok) throw new Error('API error: '+resp.status);
+  return resp.json();
 }
 
 // ═══════════════════════════════════════════════
-// STORAGE — Power Automate / Excel Online
+// STORAGE — Google Sheets
 // ═══════════════════════════════════════════════
 async function loadRoster(){
   try{
     setStatus('Loading roster…');
-    const data = await paCall(PA_CONFIG.loadRosterUrl, {});
-    const rows = data?.value || [];
+    const result = await gsCall({action:'loadRoster'});
+    const rows = result.data||[];
     roster = rows.map(row=>({
-      id: row.Id||row.id||'',
-      name: row.Name||row.name||'',
-      company: row.Company||row.company||'',
-      posType: row.PositionType||row.positionType||'',
-      position: row.JobTitle||row.jobTitle||'',
-      payType: row.PayType||row.payType||'',
-      payRate: row.PayRate||row.payRate||'',
-      signOn: row.SignOn||row.signOn||'',
-      phoneAllowance: row.PhoneAllowance||row.phoneAllowance||'',
-      onboardStart: row.OnboardStart||row.onboardStart||'',
-      start: row.StartDate||row.startDate||'',
-      jobsite: row.Jobsite||row.jobsite||'',
-      ppeGloves: row.PPEGloves||row.ppeGloves||'',
-      ppeShirt: row.PPEShirt||row.ppeShirt||'',
-      ppeVest: row.PPEVest||row.ppeVest||'',
-      ppeFRC: row.PPEFRC||row.ppeFRC||'',
+      id: row.Id||'',
+      name: row.Name||'',
+      company: row.Company||'',
+      posType: row.PositionType||'',
+      position: row.JobTitle||'',
+      payType: row.PayType||'',
+      payRate: row.PayRate||'',
+      signOn: row.SignOn||'',
+      phoneAllowance: row.PhoneAllowance||'',
+      onboardStart: row.OnboardStart||'',
+      start: row.StartDate||'',
+      jobsite: row.Jobsite||'',
+      ppeGloves: row.PPEGloves||'',
+      ppeShirt: row.PPEShirt||'',
+      ppeVest: row.PPEVest||'',
+      ppeFRC: row.PPEFRC||'',
       assets: row.Assets?row.Assets.split(',').map(s=>s.trim()).filter(Boolean):[],
       equipment: row.Equipment?row.Equipment.split(',').map(s=>s.trim()).filter(Boolean):[],
-      comments: row.Comments||row.comments||'',
-      status: row.Status||row.status||'active',
-      finalizedBy: row.FinalizedBy||row.finalizedBy||'',
-      finalizedAt: row.FinalizedAt||row.finalizedAt||'',
-      notifiedBy: row.NotifiedBy||row.notifiedBy||'',
-      notifiedAt: row.NotifiedAt||row.notifiedAt||'',
-      createdAt: row.CreatedAt||row.createdAt||''
+      comments: row.Comments||'',
+      status: row.Status||'active',
+      finalizedBy: row.FinalizedBy||'',
+      finalizedAt: row.FinalizedAt||'',
+      notifiedBy: row.NotifiedBy||'',
+      notifiedAt: row.NotifiedAt||'',
+      createdAt: row.CreatedAt||''
     })).filter(e=>e.id);
     setStatus('');
   }catch(e){
@@ -734,46 +731,49 @@ async function saveRoster(){ /* individual saves via saveEmployee */ }
 
 async function saveEmployee(emp){
   try{
-    await paCall(PA_CONFIG.saveEmployeeUrl, {
-      id: emp.id||'',
-      name: emp.name||'',
-      company: emp.company||'',
-      positionType: emp.posType||'',
-      jobTitle: emp.position||'',
-      payType: emp.payType||'',
-      payRate: emp.payRate||'',
-      signOn: emp.signOn||'',
-      phoneAllowance: emp.phoneAllowance||'',
-      onboardStart: emp.onboardStart||'',
-      startDate: emp.start||'',
-      jobsite: emp.jobsite||'',
-      ppeGloves: emp.ppeGloves||'',
-      ppeShirt: emp.ppeShirt||'',
-      ppeVest: emp.ppeVest||'',
-      ppeFRC: emp.ppeFRC||'',
-      assets: (emp.assets||[]).join(', '),
-      equipment: (emp.equipment||[]).join(', '),
-      comments: emp.comments||'',
-      status: emp.status||'active',
-      finalizedBy: emp.finalizedBy||'',
-      finalizedAt: emp.finalizedAt||'',
-      notifiedBy: emp.notifiedBy||'',
-      notifiedAt: emp.notifiedAt||'',
-      createdAt: emp.createdAt||new Date().toISOString()
+    await gsCall({
+      action: 'saveEmployee',
+      employee: {
+        Id: emp.id||'',
+        Name: emp.name||'',
+        Company: emp.company||'',
+        PositionType: emp.posType||'',
+        JobTitle: emp.position||'',
+        PayType: emp.payType||'',
+        PayRate: emp.payRate||'',
+        SignOn: emp.signOn||'',
+        PhoneAllowance: emp.phoneAllowance||'',
+        OnboardStart: emp.onboardStart||'',
+        StartDate: emp.start||'',
+        Jobsite: emp.jobsite||'',
+        PPEGloves: emp.ppeGloves||'',
+        PPEShirt: emp.ppeShirt||'',
+        PPEVest: emp.ppeVest||'',
+        PPEFRC: emp.ppeFRC||'',
+        Assets: (emp.assets||[]).join(', '),
+        Equipment: (emp.equipment||[]).join(', '),
+        Comments: emp.comments||'',
+        Status: emp.status||'active',
+        FinalizedBy: emp.finalizedBy||'',
+        FinalizedAt: emp.finalizedAt||'',
+        NotifiedBy: emp.notifiedBy||'',
+        NotifiedAt: emp.notifiedAt||'',
+        CreatedAt: emp.createdAt||new Date().toISOString()
+      }
     });
   }catch(e){ showToast('Save failed: '+e.message,'#991b1b'); }
 }
 
 async function deleteEmployee(id){
   roster=roster.filter(x=>x.id!==id);
-  // Note: deletion from Excel not supported via these flows
-  // Row stays in Excel but won't load since we filter by id
+  // Note: row stays in sheet but filtered out by empty id check
 }
 
 async function loadEmp(id){
-  // Checklist data stored in localStorage for now
-  try{const all=JSON.parse(localStorage.getItem('ob_cl')||'{}');return all[id]||{checks:{},auditLog:[],collapsed:{}};}
-  catch(e){return {checks:{},auditLog:[],collapsed:{}};}
+  try{
+    const all=JSON.parse(localStorage.getItem('ob_cl')||'{}');
+    return all[id]||{checks:{},auditLog:[],collapsed:{}};
+  }catch(e){return {checks:{},auditLog:[],collapsed:{}};}
 }
 
 async function persistEmp(){
@@ -782,8 +782,8 @@ async function persistEmp(){
     const all=JSON.parse(localStorage.getItem('ob_cl')||'{}');
     all[currentId]=empSt;
     localStorage.setItem('ob_cl',JSON.stringify(all));
-    // Also save to Excel via flow
-    await paCall(PA_CONFIG.saveChecklistUrl,{
+    await gsCall({
+      action:'saveChecklist',
       employeeId: currentId,
       checklistData: JSON.stringify(empSt)
     });
@@ -791,8 +791,20 @@ async function persistEmp(){
 }
 
 async function loadAllProgress(){
-  try{const all=JSON.parse(localStorage.getItem('ob_cl')||'{}');for(const id in all){progCache[id]=all[id].checks||{};}}
-  catch(e){}
+  try{
+    const result = await gsCall({action:'loadChecklist'});
+    const all = result.data||{};
+    for(const id in all){
+      try{
+        const data = JSON.parse(all[id]);
+        progCache[id]=data.checks||{};
+        // Also save to localStorage for fast access
+        const local=JSON.parse(localStorage.getItem('ob_cl')||'{}');
+        local[id]=data;
+        localStorage.setItem('ob_cl',JSON.stringify(local));
+      }catch(e){}
+    }
+  }catch(e){console.error('loadAllProgress',e);}
 }
 
 // ═══════════════════════════════════════════════
