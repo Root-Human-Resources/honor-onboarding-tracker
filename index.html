@@ -1360,10 +1360,8 @@ function openNotifyModal(){
         ?`<div class="notif-skip-reason">${g.skipReason}</div>`
         :`<div class="notif-group-body"><pre style="font-family:var(--mono);font-size:10px;white-space:pre-wrap;line-height:1.5;">${esc(buildEmailBody(g))}</pre></div>`}
     </div>`).join('');
-  const configured=true;
-  document.getElementById('notifyConfigWarn').classList.toggle('hidden',configured);
   const btn=document.getElementById('sendNotifyBtn');
-  btn.disabled=!configured; btn.style.opacity=configured?'1':'.5';
+  btn.disabled=false; btn.style.opacity='1';
   document.getElementById('notifyModal').classList.remove('hidden');
 }
 function closeNotifyModal(){document.getElementById('notifyModal').classList.add('hidden');}
