@@ -664,170 +664,135 @@ let rosterTab='active', saveTO=null, clSaveTO=null, deleteId=null, progCache={};
 let prevView='roster'; // for back button
 
 // ═══════════════════════════════════════════════
-// SHAREPOINT REST API CONFIG
+// POWER AUTOMATE CONFIG
 // ═══════════════════════════════════════════════
-const SP_CONFIG = {
-  siteUrl: 'https://brownind.sharepoint.com/sites/Root-HR',
-  rosterList: 'OB_Roster',
-  checklistList: 'OB_Checklist'
+const PA_CONFIG = {
+  secretKey: 'Honor1420!',
+  saveEmployeeUrl: 'https://default8bda83c3f559480fbae42af4aadca9.4b.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/acd9ecb1d76743329f5788e76f1c8924/triggers/manual/paths/invoke?api-version=1',
+  loadRosterUrl:   'https://default8bda83c3f559480fbae42af4aadca9.4b.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/6a2ab0268fc2483abcbb52276e5af5cd/triggers/manual/paths/invoke?api-version=1',
+  saveChecklistUrl:'https://default8bda83c3f559480fbae42af4aadca9.4b.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/fb8ae351944848ed879d8a8ea34253d1/triggers/manual/paths/invoke?api-version=1'
 };
 
 // ═══════════════════════════════════════════════
-// SHAREPOINT REST HELPERS
+// POWER AUTOMATE HELPERS
 // ═══════════════════════════════════════════════
-async function getFormDigest(){
-  const resp = await fetch(`${SP_CONFIG.siteUrl}/_api/contextinfo`, {
-    method: 'POST',
-    credentials: 'include',
-    headers: {'Accept':'application/json;odata=nometadata','Content-Type':'application/json'}
-  });
-  const data = await resp.json();
-  return data.FormDigestValue;
-}
-
-async function spGet(url){
-  const resp = await fetch(url, {
-    credentials: 'include',
-    headers: {'Accept':'application/json;odata=nometadata'}
-  });
-  if(!resp.ok) throw new Error('SP GET '+resp.status);
-  return resp.json();
-}
-
-async function spPost(url, body){
-  const digest = await getFormDigest();
+async function paCall(url, body){
   const resp = await fetch(url, {
     method: 'POST',
-    credentials: 'include',
-    headers: {
-      'Accept':'application/json;odata=nometadata',
-      'Content-Type':'application/json;odata=nometadata',
-      'X-RequestDigest': digest
-    },
-    body: JSON.stringify(body)
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({...body, secretKey: PA_CONFIG.secretKey})
   });
-  if(!resp.ok) throw new Error('SP POST '+resp.status);
-  if(resp.status===204) return null;
-  return resp.json();
-}
-
-async function spPatch(url, body){
-  const digest = await getFormDigest();
-  const resp = await fetch(url, {
-    method: 'POST',
-    credentials: 'include',
-    headers: {
-      'Accept':'application/json;odata=nometadata',
-      'Content-Type':'application/json;odata=nometadata',
-      'X-RequestDigest': digest,
-      'X-HTTP-Method': 'MERGE',
-      'IF-MATCH': '*'
-    },
-    body: JSON.stringify(body)
-  });
-  if(!resp.ok) throw new Error('SP PATCH '+resp.status);
-  return null;
-}
-
-async function spDelete(url){
-  const digest = await getFormDigest();
-  await fetch(url, {
-    method: 'POST',
-    credentials: 'include',
-    headers: {
-      'X-RequestDigest': digest,
-      'X-HTTP-Method': 'DELETE',
-      'IF-MATCH': '*'
-    }
-  });
+  if(!resp.ok) throw new Error('Flow error: '+resp.status);
+  try{ return await resp.json(); }catch(e){ return null; }
 }
 
 // ═══════════════════════════════════════════════
-// STORAGE — SharePoint REST API
+// STORAGE — Power Automate / Excel Online
 // ═══════════════════════════════════════════════
 async function loadRoster(){
   try{
     setStatus('Loading roster…');
-    const resp = await spGet(`${SP_CONFIG.siteUrl}/_api/web/lists/getbytitle('${SP_CONFIG.rosterList}')/items?$select=Id,Title,EmployeeData&$top=500&$orderby=Created desc`);
-    roster = (resp.value||[]).map(item=>{
-      try{ const d=JSON.parse(item.EmployeeData||'{}'); return {...d,_spId:item.Id,name:item.Title}; }
-      catch(e){ return {_spId:item.Id,name:item.Title||'Unknown',status:'active'}; }
-    });
+    const data = await paCall(PA_CONFIG.loadRosterUrl, {});
+    const rows = data?.value || [];
+    roster = rows.map(row=>({
+      id: row.Id||row.id||'',
+      name: row.Name||row.name||'',
+      company: row.Company||row.company||'',
+      posType: row.PositionType||row.positionType||'',
+      position: row.JobTitle||row.jobTitle||'',
+      payType: row.PayType||row.payType||'',
+      payRate: row.PayRate||row.payRate||'',
+      signOn: row.SignOn||row.signOn||'',
+      phoneAllowance: row.PhoneAllowance||row.phoneAllowance||'',
+      onboardStart: row.OnboardStart||row.onboardStart||'',
+      start: row.StartDate||row.startDate||'',
+      jobsite: row.Jobsite||row.jobsite||'',
+      ppeGloves: row.PPEGloves||row.ppeGloves||'',
+      ppeShirt: row.PPEShirt||row.ppeShirt||'',
+      ppeVest: row.PPEVest||row.ppeVest||'',
+      ppeFRC: row.PPEFRC||row.ppeFRC||'',
+      assets: row.Assets?row.Assets.split(',').map(s=>s.trim()).filter(Boolean):[],
+      equipment: row.Equipment?row.Equipment.split(',').map(s=>s.trim()).filter(Boolean):[],
+      comments: row.Comments||row.comments||'',
+      status: row.Status||row.status||'active',
+      finalizedBy: row.FinalizedBy||row.finalizedBy||'',
+      finalizedAt: row.FinalizedAt||row.finalizedAt||'',
+      notifiedBy: row.NotifiedBy||row.notifiedBy||'',
+      notifiedAt: row.NotifiedAt||row.notifiedAt||'',
+      createdAt: row.CreatedAt||row.createdAt||''
+    })).filter(e=>e.id);
     setStatus('');
   }catch(e){
     console.error('loadRoster error:',e);
     roster=[];
     setStatus('');
-    showToast('Could not load roster — are you logged into SharePoint?','#991b1b');
+    showToast('Could not load roster: '+e.message,'#991b1b');
   }
 }
 
-async function saveRoster(){
-  // Each employee saved individually — called by saveEmployee
-}
+async function saveRoster(){ /* individual saves via saveEmployee */ }
 
 async function saveEmployee(emp){
-  const payload = {Title: emp.name||'Unknown', EmployeeData: JSON.stringify(emp)};
   try{
-    if(emp._spId){
-      await spPatch(`${SP_CONFIG.siteUrl}/_api/web/lists/getbytitle('${SP_CONFIG.rosterList}')/items(${emp._spId})`, payload);
-    } else {
-      const resp = await spPost(`${SP_CONFIG.siteUrl}/_api/web/lists/getbytitle('${SP_CONFIG.rosterList}')/items`, payload);
-      emp._spId = resp.Id;
-      const idx = roster.findIndex(e=>e.id===emp.id);
-      if(idx>=0) roster[idx]._spId = resp.Id;
-    }
+    await paCall(PA_CONFIG.saveEmployeeUrl, {
+      id: emp.id||'',
+      name: emp.name||'',
+      company: emp.company||'',
+      positionType: emp.posType||'',
+      jobTitle: emp.position||'',
+      payType: emp.payType||'',
+      payRate: emp.payRate||'',
+      signOn: emp.signOn||'',
+      phoneAllowance: emp.phoneAllowance||'',
+      onboardStart: emp.onboardStart||'',
+      startDate: emp.start||'',
+      jobsite: emp.jobsite||'',
+      ppeGloves: emp.ppeGloves||'',
+      ppeShirt: emp.ppeShirt||'',
+      ppeVest: emp.ppeVest||'',
+      ppeFRC: emp.ppeFRC||'',
+      assets: (emp.assets||[]).join(', '),
+      equipment: (emp.equipment||[]).join(', '),
+      comments: emp.comments||'',
+      status: emp.status||'active',
+      finalizedBy: emp.finalizedBy||'',
+      finalizedAt: emp.finalizedAt||'',
+      notifiedBy: emp.notifiedBy||'',
+      notifiedAt: emp.notifiedAt||'',
+      createdAt: emp.createdAt||new Date().toISOString()
+    });
   }catch(e){ showToast('Save failed: '+e.message,'#991b1b'); }
 }
 
 async function deleteEmployee(id){
-  const e=roster.find(x=>x.id===id);
-  if(e?._spId){
-    try{ await spDelete(`${SP_CONFIG.siteUrl}/_api/web/lists/getbytitle('${SP_CONFIG.rosterList}')/items(${e._spId})`); }catch(err){}
-  }
   roster=roster.filter(x=>x.id!==id);
-  // Delete checklist data
-  try{
-    const cl = await spGet(`${SP_CONFIG.siteUrl}/_api/web/lists/getbytitle('${SP_CONFIG.checklistList}')/items?$filter=EmployeeId eq '${id}'&$select=Id`);
-    for(const item of cl.value||[]){
-      await spDelete(`${SP_CONFIG.siteUrl}/_api/web/lists/getbytitle('${SP_CONFIG.checklistList}')/items(${item.Id})`).catch(()=>{});
-    }
-  }catch(e){}
+  // Note: deletion from Excel not supported via these flows
+  // Row stays in Excel but won't load since we filter by id
 }
 
 async function loadEmp(id){
-  try{
-    const resp = await spGet(`${SP_CONFIG.siteUrl}/_api/web/lists/getbytitle('${SP_CONFIG.checklistList}')/items?$filter=EmployeeId eq '${id}'&$select=Id,ChecklistData&$top=1`);
-    const item = (resp.value||[])[0];
-    if(item){
-      const data = JSON.parse(item.ChecklistData||'{}');
-      data._spId = item.Id;
-      return data;
-    }
-  }catch(e){ console.error('loadEmp',e); }
-  return {checks:{},auditLog:[],collapsed:{}};
+  // Checklist data stored in localStorage for now
+  try{const all=JSON.parse(localStorage.getItem('ob_cl')||'{}');return all[id]||{checks:{},auditLog:[],collapsed:{}};}
+  catch(e){return {checks:{},auditLog:[],collapsed:{}};}
 }
 
 async function persistEmp(){
-  if(!currentId||!empSt) return;
+  if(!currentId||!empSt)return;
   try{
-    const payload = {EmployeeId: currentId, ChecklistData: JSON.stringify(empSt)};
-    if(empSt._spId){
-      await spPatch(`${SP_CONFIG.siteUrl}/_api/web/lists/getbytitle('${SP_CONFIG.checklistList}')/items(${empSt._spId})`, payload);
-    } else {
-      const resp = await spPost(`${SP_CONFIG.siteUrl}/_api/web/lists/getbytitle('${SP_CONFIG.checklistList}')/items`, payload);
-      empSt._spId = resp.Id;
-    }
-  }catch(e){ showToast('Checklist save failed: '+e.message,'#991b1b'); }
+    const all=JSON.parse(localStorage.getItem('ob_cl')||'{}');
+    all[currentId]=empSt;
+    localStorage.setItem('ob_cl',JSON.stringify(all));
+    // Also save to Excel via flow
+    await paCall(PA_CONFIG.saveChecklistUrl,{
+      employeeId: currentId,
+      checklistData: JSON.stringify(empSt)
+    });
+  }catch(e){console.error('persistEmp',e);}
 }
 
 async function loadAllProgress(){
-  try{
-    const resp = await spGet(`${SP_CONFIG.siteUrl}/_api/web/lists/getbytitle('${SP_CONFIG.checklistList}')/items?$select=EmployeeId,ChecklistData&$top=500`);
-    for(const item of resp.value||[]){
-      try{ const data=JSON.parse(item.ChecklistData||'{}'); progCache[item.EmployeeId]=data.checks||{}; }catch(e){}
-    }
-  }catch(e){ console.error('loadAllProgress',e); }
+  try{const all=JSON.parse(localStorage.getItem('ob_cl')||'{}');for(const id in all){progCache[id]=all[id].checks||{};}}
+  catch(e){}
 }
 
 // ═══════════════════════════════════════════════
@@ -1468,21 +1433,14 @@ async function loadCurrentUser(){
 // ═══════════════════════════════════════════════
 (async()=>{
   buildEquipmentList([]);
-  setStatus('Loading…');
-  try{
-    await loadCurrentUser();
-    await loadRoster();
-    await loadAllProgress();
-    setStatus('');
-    document.getElementById('viewRoster').classList.add('active');
-    renderRoster();
-  }catch(e){
-    setStatus('');
-    showToast('Error loading data — make sure you are logged into SharePoint','#991b1b');
-    // Still show roster even if data fails
-    document.getElementById('viewRoster').classList.add('active');
-    renderRoster();
-  }
+  // Load username from localStorage
+  try{const u=localStorage.getItem('ob_user');if(u){currentUser=u;document.getElementById('currentUser').value=u;}}catch(e){}
+  document.getElementById('viewRoster').classList.add('active');
+  setStatus('Loading roster…');
+  await loadRoster();
+  await loadAllProgress();
+  setStatus('');
+  renderRoster();
 })();
 </script>
 </body>
