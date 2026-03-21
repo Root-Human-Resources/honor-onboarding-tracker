@@ -1366,15 +1366,11 @@ async function sendNotifications(){
         emailSubject: g.subject,
         emailBody: buildEmailBody(g)
       };
-      const resp = await fetch(NOTIFY_CONFIG.flowUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-secret-key': NOTIFY_CONFIG.secretKey
-        },
-        body: JSON.stringify(payload)
+      const resp = await gsCall({
+        action: 'sendNotification',
+        payload: payload
       });
-      if(!resp.ok) throw new Error('HTTP '+resp.status);
+      if(resp?.status !== 'success') throw new Error('Flow error: '+(resp?.code||'unknown'));
       el.textContent='✓ Sent'; el.className='nstat sent'; sent++;
     }catch(err){
       el.textContent='✗ Error'; el.className='nstat error'; errs++;
