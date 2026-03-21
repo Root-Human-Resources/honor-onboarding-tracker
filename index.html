@@ -218,8 +218,9 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
     </div>
   </div>
   <div class="user-pill">
-    <label>You:</label>
-    <input type="text" id="currentUser" placeholder="Enter your name…" oninput="saveUserName()">
+    <label>YOU:</label>
+    <span id="currentUserDisplay" style="font-family:var(--sans);font-size:13px;color:#ffffff;font-weight:500;">—</span>
+    <input type="hidden" id="currentUser">
   </div>
 </div>
 
@@ -523,6 +524,21 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
     <div class="modal-ftr">
       <button class="btn btn-secondary" onclick="closeFinalizeModal()">Cancel</button>
       <button class="btn btn-finalize" onclick="confirmFinalize()">✓ Finalize</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODAL: Welcome ═══ -->
+<div class="modal-overlay" id="welcomeModal" style="display:flex;align-items:center;justify-content:center;z-index:500;">
+  <div class="modal" style="max-width:440px;text-align:center;">
+    <div style="padding:36px 36px 0;">
+      <div style="font-size:36px;margin-bottom:16px;">👋</div>
+      <h2 style="font-size:20px;font-weight:700;color:var(--dark);margin-bottom:8px;">Welcome to the Onboarding Tracker</h2>
+      <p style="font-size:13px;color:var(--muted);line-height:1.65;margin-bottom:24px;">Enter your name so your colleagues know who made changes. This is saved on your device — you won't be asked again.</p>
+      <input type="text" id="welcomeNameInput" placeholder="Your full name" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:10px 14px;font-size:14px;font-family:var(--sans);outline:none;margin-bottom:16px;" onkeydown="if(event.key==='Enter')confirmWelcome()">
+    </div>
+    <div class="modal-ftr" style="padding:16px 36px 28px;">
+      <button class="btn btn-primary" onclick="confirmWelcome()" style="width:100%;justify-content:center;font-size:14px;padding:11px;">Get Started</button>
     </div>
   </div>
 </div>
@@ -1419,11 +1435,26 @@ function exportAudit(){
 }
 
 // ═══════════════════════════════════════════════
-// USER
+// USER / WELCOME
 // ═══════════════════════════════════════════════
-async function saveUserName(){
+function saveUserName(){
   currentUser=document.getElementById('currentUser').value.trim();
   try{localStorage.setItem('ob_user',currentUser);}catch(e){}
+}
+
+function showWelcome(){
+  document.getElementById('welcomeModal').style.display='flex';
+  setTimeout(()=>document.getElementById('welcomeNameInput').focus(),100);
+}
+
+function confirmWelcome(){
+  const name=document.getElementById('welcomeNameInput').value.trim();
+  if(!name){showToast('Please enter your name','#c8440a');return;}
+  currentUser=name;
+  document.getElementById('currentUser').value=name;
+  document.getElementById('currentUserDisplay').textContent=name;
+  try{localStorage.setItem('ob_user',name);}catch(e){}
+  document.getElementById('welcomeModal').style.display='none';
 }
 
 async function loadCurrentUser(){
@@ -1445,8 +1476,18 @@ async function loadCurrentUser(){
 // ═══════════════════════════════════════════════
 (async()=>{
   buildEquipmentList([]);
-  // Load username from localStorage
-  try{const u=localStorage.getItem('ob_user');if(u){currentUser=u;document.getElementById('currentUser').value=u;}}catch(e){}
+  // Check for saved username
+  try{
+    const u=localStorage.getItem('ob_user');
+    if(u){
+      currentUser=u;
+      document.getElementById('currentUser').value=u;
+      document.getElementById('currentUserDisplay').textContent=u;
+      document.getElementById('welcomeModal').style.display='none';
+    } else {
+      showWelcome();
+    }
+  }catch(e){ showWelcome(); }
   document.getElementById('viewRoster').classList.add('active');
   setStatus('Loading roster…');
   await loadRoster();
