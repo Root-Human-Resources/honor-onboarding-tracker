@@ -1370,7 +1370,7 @@ async function sendNotifications(){
         action: 'sendNotification',
         payload: payload
       });
-      if(resp?.status !== 'success') throw new Error('Flow error: '+(resp?.code||'unknown'));
+      if(resp?.status !== 'success') throw new Error('Flow error: code='+(resp?.code||'?')+' body='+(resp?.body||resp?.error||'unknown'));
       el.textContent='✓ Sent'; el.className='nstat sent'; sent++;
     }catch(err){
       el.textContent='✗ Error'; el.className='nstat error'; errs++;
